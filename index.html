@@ -16,19 +16,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* Layout: shelf of album "sleeves" in a 2-col grid, album page with a track sheet, fixed mini player docked at the bottom. */
+/* Layout: three tabs (albums / playlists / songs) in a bottom tab bar, a mini player docked above it, detail pages pushed over each tab. */
 :root{
   --bg:#F2F1EC; --surface:#FFFFFF; --ink:#17181C; --muted:#61656E; --line:#DDDCD4;
-  --accent:#2C46C4; --accent-ink:#FFFFFF; --accent-soft:#E3E7F8; --warn:#9A3412; --warn-bg:#FBEBDD;
+  --accent:#2C46C4; --accent-ink:#FFFFFF; --accent-soft:#E3E7F8; --warn:#9A3412; --warn-bg:#FBEBDD; --fav:#C8264B;
   --display:"Zen Kaku Gothic New",-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
   --body:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
-  --mini-h:68px;
+  --mini-h:64px; --tab-h:54px;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
   --bg:#121316; --surface:#1B1C21; --ink:#ECEDF0; --muted:#9CA0AA; --line:#2B2D34;
-  --accent:#93A4FF; --accent-ink:#0F1433; --accent-soft:#232A4D; --warn:#FDBA8C; --warn-bg:#3A2418;
+  --accent:#93A4FF; --accent-ink:#0F1433; --accent-soft:#232A4D; --warn:#FDBA8C; --warn-bg:#3A2418; --fav:#FF7A95;
   color-scheme:dark;
 }}
 *{box-sizing:border-box}
@@ -36,60 +36,81 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body)
 body{min-height:100vh;padding-top:env(safe-area-inset-top,0px)}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
-button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 img{max-width:100%;display:block}
-.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 calc(var(--mini-h) + 32px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 calc(var(--mini-h) + var(--tab-h) + 28px + env(safe-area-inset-bottom,0px))}
 
 /* header */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:8px;padding-block:12px 10px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:6px;padding-block:10px 8px;border-bottom:1px solid var(--line);margin-bottom:14px}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.top h1{flex:1;min-width:0;margin:0;font-family:var(--display);font-weight:900;font-size:20px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top h1{flex:1;min-width:0;margin:0;font-family:var(--display);font-weight:900;font-size:21px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .iconbtn{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;flex:none}
 .iconbtn:active{background:var(--line)}
 .iconbtn svg{width:22px;height:22px;fill:currentColor}
 
 /* generic */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 18px;border-radius:21px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:20px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{color:var(--warn)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px}
 .btn svg{width:18px;height:18px;fill:currentColor}
 .btn:disabled{opacity:.5}
 .field{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 12px;font:inherit;font-size:16px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
 .stack{display:flex;flex-direction:column;gap:14px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .muted{color:var(--muted)}
 .small{font-size:13px}
 .h2{font-family:var(--display);font-weight:900;font-size:22px;margin:0;text-wrap:balance}
 .label{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:700}
 .code{font-family:var(--mono);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;word-break:break-all;user-select:all}
-ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;line-height:1.6}
 .banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-weight:700;font-size:14px}
 .banner .btn{height:34px;padding:0 14px}
+.tools{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+.search{position:relative;flex:1;min-width:0}
+.search svg{position:absolute;left:11px;top:50%;width:18px;height:18px;transform:translateY(-50%);fill:var(--muted);pointer-events:none}
+.search input{width:100%;height:40px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 14px 0 36px;font:inherit;font-size:16px;-webkit-appearance:none;appearance:none}
+.select{height:40px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 12px;font:inherit;font-size:14px;flex:none}
+.meta-line{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 
-/* shelf */
-.shelf-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+/* album shelf */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px 14px}
-.sleeve{text-align:left;display:flex;flex-direction:column;gap:8px;min-width:0}
-.cover{position:relative;aspect-ratio:1;width:100%;max-width:100%;border-radius:6px;overflow:hidden;background:var(--line);box-shadow:0 1px 0 rgba(0,0,0,.06),0 6px 16px -10px rgba(0,0,0,.45)}
+.sleeve{text-align:left;display:flex;flex-direction:column;gap:6px;min-width:0}
+.cover{position:relative;aspect-ratio:1;width:100%;max-width:100%;border-radius:6px;overflow:hidden;background:var(--line);box-shadow:0 1px 0 rgba(0,0,0,.06),0 6px 16px -10px rgba(0,0,0,.45);flex:none}
 .cover img{width:100%;height:100%;object-fit:cover}
 .cover .ph{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:900;font-size:44px;color:#fff;letter-spacing:-.02em}
 .cover .ph::after{content:"";position:absolute;width:38%;aspect-ratio:1;border-radius:50%;border:2px solid rgba(255,255,255,.35);right:-8%;bottom:-8%}
+.cover.thumb{width:42px;border-radius:4px;box-shadow:none}
+.cover.thumb .ph{font-size:16px}.cover.thumb .ph::after{display:none}
 .sleeve .t{font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sleeve .a{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
-.empty{padding:40px 8px;text-align:center;color:var(--muted);line-height:1.7}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.empty{padding:40px 8px;text-align:center;color:var(--muted);line-height:1.7;grid-column:1/-1}
 
-/* album */
-.album-hero{display:grid;grid-template-columns:min(42%,220px) 1fr;gap:18px;align-items:end;margin-bottom:18px}
-.album-hero .meta{display:flex;flex-direction:column;gap:6px;min-width:0}
-@media (max-width:420px){.album-hero{grid-template-columns:1fr}.album-hero .cover{max-width:260px}}
+/* detail hero */
+.hero{display:grid;grid-template-columns:min(42%,220px) 1fr;gap:18px;align-items:end;margin-bottom:18px}
+.hero .meta{display:flex;flex-direction:column;gap:6px;min-width:0}
+@media (max-width:420px){.hero{grid-template-columns:1fr}.hero .cover{max-width:240px}}
+.pl-art{display:grid;grid-template-columns:1fr 1fr;aspect-ratio:1;border-radius:6px;overflow:hidden;background:var(--line)}
+.pl-art .cover{border-radius:0;box-shadow:none}
+.pl-art.fav{display:grid;place-items:center;background:linear-gradient(135deg,var(--fav),color-mix(in srgb,var(--fav) 55%,#000))}
+.pl-art.fav svg{width:42%;height:42%;fill:#fff}
+@media (max-width:420px){.hero .pl-art{max-width:240px}}
+
+/* track rows */
 .tracks{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
-.trk{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 4px;border-bottom:1px solid var(--line)}
-.trk .n{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
-.trk .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.trk .disc{font-size:12px;color:var(--muted)}
-.trk.on .nm{color:var(--accent);font-weight:700}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:.8}
+.trk{display:grid;grid-template-columns:1fr auto;align-items:center;border-bottom:1px solid var(--line)}
+.trk-main{display:grid;grid-template-columns:42px 1fr 16px;align-items:center;gap:12px;text-align:left;padding:9px 0 9px 2px;min-width:0;min-height:56px}
+.trk .n{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;padding-right:4px}
+.trk .nm{min-width:0}
+.trk .tt{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trk .nm small{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.trk.on .tt{color:var(--accent);font-weight:700}
+.trk .more{color:var(--muted)}
+.trk .st{display:grid;place-items:center}
+.disc-h{padding:14px 4px 6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:.75}
 .eq{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
 .eq i{width:3px;background:var(--accent);animation:eq 1s infinite ease-in-out}
 .eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}
@@ -97,17 +118,30 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
 @keyframes eq{0%,100%{height:4px}50%{height:14px}}
 @media (prefers-reduced-motion:reduce){.eq i{animation:none;height:10px}}
 
-/* folder picker */
+/* playlist list & folder picker */
 .list{list-style:none;margin:0;padding:0}
-.list button{width:100%;text-align:left;padding:13px 4px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
-.list svg{width:20px;height:20px;fill:var(--muted);flex:none}
+.list > li > button{width:100%;text-align:left;padding:10px 2px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;min-height:62px}
+.list .grow{flex:1;min-width:0}
+.list .grow b,.list .grow span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .grow span{font-size:13px;color:var(--muted);margin-top:2px}
+.list .ico{width:46px;height:46px;flex:none;border-radius:6px;display:grid;place-items:center;background:var(--accent-soft)}
+.list .ico svg{width:22px;height:22px;fill:var(--accent)}
+.list .ico.fav{background:var(--fav)}.list .ico.fav svg{fill:#fff}
+.list .ico.plain{background:none}.list .ico.plain svg{fill:var(--muted)}
+.list .ico .cover{width:46px;border-radius:6px;box-shadow:none}
 
-/* mini player */
-.mini{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+/* tab bar + mini player */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+.tabs .in{max-width:760px;margin:0 auto;display:flex}
+.tabs button{flex:1;height:var(--tab-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:700;color:var(--muted)}
+.tabs button svg{width:24px;height:24px;fill:currentColor}
+.tabs button.on{color:var(--accent)}
+.mini{position:fixed;left:0;right:0;bottom:calc(var(--tab-h) + 1px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+body.notabs .mini{bottom:0;padding-bottom:env(safe-area-inset-bottom,0px)}
 .mini .bar{position:absolute;left:0;top:-1px;height:2px;background:var(--accent);width:0}
-.mini .in{max-width:760px;margin:0 auto;height:var(--mini-h);display:flex;align-items:center;gap:10px}
+.mini .in{max-width:760px;margin:0 auto;height:var(--mini-h);display:flex;align-items:center;gap:8px}
 .mini .open{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left}
-.mini .cover{width:46px;flex:none;border-radius:4px}
+.mini .cover{width:44px;border-radius:4px}
 .mini .cover .ph{font-size:18px}
 .mini .txt{min-width:0}
 .mini .txt b,.mini .txt span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -115,7 +149,8 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
 
 /* full player */
 .sheet{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));overflow-y:auto}
-.sheet .grab{display:flex;justify-content:space-between;align-items:center;padding-block:8px}
+.sheet .grab{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-block:8px}
+.sheet .grab .label{flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .player{flex:1;max-width:440px;width:100%;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:20px}
 .player .cover{border-radius:8px;box-shadow:0 20px 40px -24px rgba(0,0,0,.6)}
 .player .ttl{font-family:var(--display);font-weight:900;font-size:21px;line-height:1.35;text-wrap:balance}
@@ -129,13 +164,37 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
 .toggle{position:relative;color:var(--muted)}
 .toggle.on{color:var(--accent)}
 .toggle .one{position:absolute;right:4px;bottom:4px;font-family:var(--mono);font-size:10px;font-weight:700}
+#favBtn.on{color:var(--fav)}
+
+/* action sheet */
+.menu-back{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.38);display:flex;align-items:flex-end;justify-content:center}
+.menu{background:var(--surface);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:6px 0 calc(10px + env(safe-area-inset-bottom,0px));max-height:82vh;overflow-y:auto}
+.menu .mt{padding:12px 20px 8px;font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--line)}
+.menu > button{display:flex;gap:14px;align-items:center;width:100%;padding:14px 20px;text-align:left;font-size:16px}
+.menu > button svg{width:20px;height:20px;fill:currentColor;flex:none;opacity:.8}
+.menu > button.danger{color:var(--warn)}
+.menu > button.cancel{justify-content:center;color:var(--muted);border-top:1px solid var(--line);margin-top:4px}
+.menu form{padding:16px 20px 6px;display:flex;flex-direction:column;gap:12px}
 
 /* settings */
 .settings dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px}
 .settings dt{color:var(--muted)}
-.settings dd{margin:0;min-width:0;word-break:break-all}
+.settings dd{margin:0;min-width:0;word-break:break-all;font-variant-numeric:tabular-nums}
+.switch{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.switch input{appearance:none;-webkit-appearance:none;flex:none;width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;cursor:pointer;transition:background .15s;margin:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(20px)}
+.usage{list-style:none;margin:0;padding:0}
+.usage li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.usage li:last-child{border-bottom:0}
+.usage .grow{flex:1;min-width:0}
+.usage .grow b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usage .grow span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.meter{height:4px;border-radius:2px;background:var(--line);margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--mini-h) + 18px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 8px 24px -12px rgba(0,0,0,.5)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--mini-h) + var(--tab-h) + 18px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 8px 24px -12px rgba(0,0,0,.5)}
 .spin{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
 </style>
@@ -155,6 +214,18 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2h8A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></symbol>
   <symbol id="i-save" viewBox="0 0 24 24"><path d="M11 4h2v8.2l3.1-3.1 1.4 1.4L12 16l-5.5-5.5 1.4-1.4 3.1 3.1zM5 18h14v2H5z"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 16.2-4.2-4.2-1.4 1.4 5.6 5.6 11-11-1.4-1.4z"/></symbol>
+  <symbol id="i-album" viewBox="0 0 24 24"><path d="M4 4h16v16H4zm2 2v12h12V6zm6 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 2.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></symbol>
+  <symbol id="i-playlist" viewBox="0 0 24 24"><path d="M3 5h12v2H3zm0 4h12v2H3zm0 4h8v2H3zm15-8h4v2h-2v9.5a2.5 2.5 0 1 1-2-2.45z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 4h11v12.5a2.5 2.5 0 1 1-2-2.45V8h-7v10.5A2.5 2.5 0 1 1 9 16.05z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.3 10.6 19C5.6 14.5 2.5 11.7 2.5 8.2 2.5 5.4 4.7 3.2 7.5 3.2c1.6 0 3.1.7 4.5 2 1.4-1.3 2.9-2 4.5-2 2.8 0 5 2.2 5 5 0 3.5-3.1 6.3-8.1 10.8z"/></symbol>
+  <symbol id="i-heart-o" viewBox="0 0 24 24"><path d="M16.5 3.2c-1.6 0-3.1.7-4.5 2-1.4-1.3-2.9-2-4.5-2-2.8 0-5 2.2-5 5 0 3.5 3.1 6.3 8.1 10.8l1.4 1.3 1.4-1.3c5-4.5 8.1-7.3 8.1-10.8 0-2.8-2.2-5-5-5zM12.1 17.6l-.1.1-.1-.1C7.1 13.3 4.5 10.9 4.5 8.2c0-1.7 1.3-3 3-3 1.3 0 2.6.9 3.1 2h2.8c.5-1.1 1.8-2 3.1-2 1.7 0 3 1.3 3 3 0 2.7-2.6 5.1-7.4 9.4z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><path d="M6 10.2a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zm6 0a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zm6 0a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M11 19V8.8l-4.6 4.6L5 12l7-7 7 7-1.4 1.4L13 8.8V19z"/></symbol>
+  <symbol id="i-dn" viewBox="0 0 24 24"><path d="M13 5v10.2l4.6-4.6L19 12l-7 7-7-7 1.4-1.4 4.6 4.6V5z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4zm-3 6h12l-1 12H7zm4 2v8h1.5v-8zm2.5 0v8H14v-8z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 16.8V20h3.2l9.4-9.4-3.2-3.2zm15-9.6a1 1 0 0 0 0-1.4l-1.8-1.8a1 1 0 0 0-1.4 0l-1.5 1.5 3.2 3.2z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M10 4a6 6 0 0 1 4.8 9.6l5 5-1.4 1.4-5-5A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></symbol>
 </svg>
 
 <div class="wrap">
@@ -171,7 +242,6 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
   <main id="view"></main>
 </div>
 
-<!-- mini player -->
 <div class="mini" id="mini" hidden>
   <div class="bar" id="miniBar"></div>
   <div class="in">
@@ -184,12 +254,19 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
   </div>
 </div>
 
-<!-- full player -->
+<nav class="tabs" id="tabs" aria-label="表示の切り替え">
+  <div class="in">
+    <button data-tab="albums"><svg><use href="#i-album"/></svg>アルバム</button>
+    <button data-tab="playlists"><svg><use href="#i-playlist"/></svg>プレイリスト</button>
+    <button data-tab="songs"><svg><use href="#i-note"/></svg>曲</button>
+  </div>
+</nav>
+
 <section class="sheet" id="sheet" hidden aria-label="再生中">
   <div class="grab">
     <button class="iconbtn" id="sheetClose" aria-label="閉じる"><svg><use href="#i-down"/></svg></button>
     <span class="label" id="sheetPos"></span>
-    <span style="width:40px"></span>
+    <button class="iconbtn" id="favBtn" aria-label="お気に入り"><svg><use href="#i-heart-o"/></svg></button>
   </div>
   <div class="player">
     <div class="cover" id="pCover"></div>
@@ -215,7 +292,7 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
 
 <script>
 "use strict";
-/* ---------- basics ---------- */
+/* ================= basics ================= */
 const $ = s => document.querySelector(s);
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -223,6 +300,7 @@ const h = (tag, attrs = {}, ...kids) => {
     if (v == null || v === false) continue;
     if (k === 'class') el.className = v;
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'value') el.value = v;
     else el.setAttribute(k, v === true ? '' : v);
   }
   for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : String(kid));
@@ -235,9 +313,12 @@ const ls = {
   del(k) { try { localStorage.removeItem('dm.' + k); } catch {} }
 };
 let toastTimer;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 3200); }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 3000); }
 const fmt = s => { if (!isFinite(s) || s < 0) s = 0; s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const fmtMB = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 1048576).toFixed(b >= 104857600 ? 0 : 1) + ' MB';
 const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+// 検索用：全角半角・大文字小文字・カタカナひらがなの違いを無視
+const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const REDIRECT = location.origin + location.pathname.replace(/index\.html$/, '');
@@ -246,31 +327,34 @@ const AUDIO_EXT = /\.(mp3|m4a|m4b|aac|mp4|wav|aif|aiff|flac|alac|caf|ogg|oga|opu
 const IMG_EXT = /\.(jpe?g|png|webp|gif)$/i;
 const C_AUDIO = 'dm-audio-v1', C_IMG = 'dm-img-v1';
 
-/* ---------- state ---------- */
+/* ================= state ================= */
 const S = {
   clientId: ls.get('clientId', ''),
-  token: ls.get('token', null),        // {value, exp}
-  root: ls.get('root', null),          // {id, name}
-  library: ls.get('library', []),      // albums
+  token: ls.get('token', null),
+  root: ls.get('root', null),
+  library: ls.get('library', []),
   scannedAt: ls.get('scannedAt', 0),
+  tags: ls.get('tags', {}),
+  playlists: ls.get('playlists', [{ id: 'fav', name: 'お気に入り', ids: [] }]),
+  autoSave: ls.get('autoSave', true),
+  songSort: ls.get('songSort', 'title'),
   shuffle: ls.get('shuffle', false),
-  repeat: ls.get('repeat', 'off'),     // off | all | one
-  base: [], queue: [], qi: -1, albumId: null,
-  view: { name: 'library' },
+  repeat: ls.get('repeat', 'off'),
+  base: [], queue: [], qi: -1, ctx: null,
+  tab: 'albums', view: { name: 'albums' },
+  q: { albums: '', playlists: '', songs: '' },
   pendingSeek: 0
 };
 const cached = new Set();
+const IDX = new Map();   // trackId -> {t, a}
 const tokenOk = () => !!(S.token && Date.now() < S.token.exp - 60000);
 class AuthNeeded extends Error {}
 
-/* ---------- auth (OAuth implicit flow via redirect: works in iOS home-screen apps) ---------- */
+/* ================= auth ================= */
 function login(silent) {
   const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  ls.set('oauth', { nonce, silent: !!silent, view: S.view, resume: resumeSnapshot() });
-  const p = new URLSearchParams({
-    client_id: S.clientId, redirect_uri: REDIRECT, response_type: 'token',
-    scope: SCOPE, include_granted_scopes: 'true', state: nonce
-  });
+  ls.set('oauth', { nonce, silent: !!silent, view: S.view, tab: S.tab, resume: resumeSnapshot() });
+  const p = new URLSearchParams({ client_id: S.clientId, redirect_uri: REDIRECT, response_type: 'token', scope: SCOPE, include_granted_scopes: 'true', state: nonce });
   if (silent) p.set('prompt', 'none');
   location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + p;
 }
@@ -282,22 +366,20 @@ function readAuthRedirect() {
   ls.del('oauth');
   if (!pending || p.get('state') !== pending.nonce) return;
   if (pending.view) S.view = pending.view;
+  if (pending.tab) S.tab = pending.tab;
   if (pending.resume) ls.set('resume', pending.resume);
   if (p.get('access_token')) {
     S.token = { value: p.get('access_token'), exp: Date.now() + (+p.get('expires_in') || 3600) * 1000 };
     ls.set('token', S.token);
-  } else if (pending.silent) {
-    login(false);             // silent attempt failed: show the normal Google screen
-  } else {
-    toast('ログインできませんでした（' + p.get('error') + '）');
-  }
+  } else if (pending.silent) login(false);
+  else toast('ログインできませんでした（' + p.get('error') + '）');
 }
 function logout() {
   if (S.token) fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(S.token.value), { method: 'POST' }).catch(() => {});
   S.token = null; ls.del('token');
 }
 
-/* ---------- Drive API ---------- */
+/* ================= Drive API ================= */
 async function drive(path, params = {}, blob = false) {
   if (!tokenOk()) { needAuth(); throw new AuthNeeded(); }
   const url = new URL('https://www.googleapis.com/drive/v3/' + path);
@@ -326,7 +408,8 @@ const qEsc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 function trackFrom(f, disc) {
   const base = f.name.replace(/\.[^.]+$/, '');
   const m = base.match(/^(\d{1,3})[\s._\-)]+(.+)$/);
-  return { id: f.id, title: m ? m[2].trim() : base, no: m ? +m[1] : null, disc: disc || '', size: +f.size || 0 };
+  const title = m ? m[2].trim() : base, no = m ? +m[1] : null;
+  return { id: f.id, title, no, fileTitle: title, fileNo: no, artist: '', discNo: null, disc: disc || '', size: +f.size || 0 };
 }
 function splitName(name) {
   const i = name.indexOf(' - ');
@@ -347,21 +430,34 @@ async function scanLibrary() {
     const c = await listChildren(f.id);
     let tracks = c.filter(isAudio).sort(byName).map(x => trackFrom(x));
     let cover = pickCover(c);
-    for (const d of c.filter(isFolder).sort(byName)) {          // Disc 1 / Disc 2 などの一段下のフォルダ
+    for (const d of c.filter(isFolder).sort(byName)) {
       const dc = await listChildren(d.id);
       tracks = tracks.concat(dc.filter(isAudio).sort(byName).map(x => trackFrom(x, d.name)));
       cover = cover || pickCover(dc);
     }
-    return { id: f.id, name: f.name, ...splitName(f.name), cover, tracks };
+    const sp = splitName(f.name);
+    return { id: f.id, name: f.name, ...sp, folderTitle: sp.title, folderArtist: sp.artist, cover, tracks };
   });
   const loose = kids.filter(isAudio).sort(byName);
-  if (loose.length) albums.push({ id: S.root.id, name: S.root.name, artist: '', title: S.root.name + '（フォルダ直下の曲）', cover: pickCover(kids), tracks: loose.map(x => trackFrom(x)) });
-  S.library = albums.filter(a => a.tracks.length);
+  if (loose.length) { const t = S.root.name + '（フォルダ直下の曲）'; albums.push({ id: S.root.id, name: S.root.name, artist: '', title: t, folderTitle: t, folderArtist: '', cover: pickCover(kids), tracks: loose.map(x => trackFrom(x)) }); }
+  const fresh = albums.filter(a => a.tracks.length);
+  // Driveから消えても、全曲を端末に保存済みのアルバムは「端末のみ」として残す
+  const ids = new Set(fresh.map(a => a.id));
+  for (const old of S.library) {
+    if (!ids.has(old.id) && old.tracks.length && old.tracks.every(t => cached.has(t.id))) fresh.push({ ...old, localOnly: true });
+  }
+  S.library = fresh;
+  applyTags();
   S.scannedAt = Date.now();
   ls.set('library', S.library); ls.set('scannedAt', S.scannedAt);
 }
+function rebuildIndex() {
+  IDX.clear();
+  for (const a of S.library) for (const t of a.tracks) IDX.set(t.id, { t, a });
+}
+const albumOf = t => t && IDX.get(t.id)?.a;
 
-/* ---------- local file cache (Cache Storage) ---------- */
+/* ================= local cache ================= */
 const keyFor = (c, id) => new Request(location.origin + '/__dm/' + c + '/' + id);
 const inflight = new Map();
 async function getBlob(c, id) {
@@ -382,40 +478,390 @@ async function loadCachedIndex() {
 async function clearCaches() {
   try { await caches.delete(C_AUDIO); await caches.delete(C_IMG); } catch {}
   cached.clear(); coverURLs.clear();
+  S.library = S.library.filter(a => !a.localOnly); rebuildIndex(); ls.set('library', S.library);
+}
+async function removeTracksLocal(ids) {
+  try { const ca = await caches.open(C_AUDIO); for (const id of ids) { await ca.delete(keyFor(C_AUDIO, id)); cached.delete(id); } } catch {}
+}
+async function removeAlbumLocal(a) {
+  await removeTracksLocal(a.tracks.map(t => t.id));
+  try {
+    const ci = await caches.open(C_IMG);
+    if (a.cover) await ci.delete(keyFor(C_IMG, a.cover));
+    if (a.embedArt) await ci.delete(keyFor(C_IMG, 'emb-' + a.embedArt));
+  } catch {}
+  const k = artKey(a); if (k && coverURLs.has(k)) { URL.revokeObjectURL(coverURLs.get(k)); coverURLs.delete(k); }
+  if (a.localOnly) { S.library = S.library.filter(x => x.id !== a.id); rebuildIndex(); }
+  ls.set('library', S.library);
+}
+const bytesOf = tracks => tracks.reduce((n, t) => n + (t.size || 0), 0);
+const savedBytes = tracks => bytesOf(tracks.filter(t => cached.has(t.id)));
+
+/* ================= tags inside audio files (ID3 / FLAC / MP4) ================= */
+const latin = (b, o, n) => { let s = ''; for (let i = 0; i < n && o + i < b.length; i++) s += String.fromCharCode(b[o + i]); return s; };
+const u32 = (b, o) => ((b[o] << 24) >>> 0) + (b[o + 1] << 16) + (b[o + 2] << 8) + b[o + 3];
+const u32le = (b, o) => b[o] + (b[o + 1] << 8) + (b[o + 2] << 16) + ((b[o + 3] << 24) >>> 0);
+const syncsafe = (b, o) => (b[o] & 0x7f) << 21 | (b[o + 1] & 0x7f) << 14 | (b[o + 2] & 0x7f) << 7 | (b[o + 3] & 0x7f);
+const dec = (label, bytes, fatal) => new TextDecoder(label, { fatal }).decode(bytes);
+function decodeText(bytes, enc) {
+  let s;
+  if (enc === 1) s = (bytes[0] === 0xFE && bytes[1] === 0xFF) ? dec('utf-16be', bytes.subarray(2)) : dec('utf-16le', (bytes[0] === 0xFF && bytes[1] === 0xFE) ? bytes.subarray(2) : bytes);
+  else if (enc === 2) s = dec('utf-16be', bytes);
+  else if (enc === 3) s = dec('utf-8', bytes);
+  else {  // ISO-8859-1と書かれていても、日本の古いmp3はShift_JISのことが多い
+    s = null;
+    if (bytes.some(x => x >= 0x80)) { try { s = dec('shift_jis', bytes, true); } catch {} if (s == null) { try { s = dec('utf-8', bytes, true); } catch {} } }
+    if (s == null) s = latin(bytes, 0, bytes.length);
+  }
+  return s.split('\u0000').map(x => x.trim()).find(Boolean) || '';
+}
+const num = v => { const n = parseInt(String(v || ''), 10); return isFinite(n) && n > 0 ? n : null; };
+function nullEnd(b, p, enc) {
+  if (enc === 1 || enc === 2) { while (p + 1 < b.length && (b[p] || b[p + 1])) p += 2; return p; }
+  while (p < b.length && b[p]) p++; return p;
+}
+function apicFrame(b, v22) {
+  const enc = b[0]; let p = 1, mime;
+  if (v22) { mime = 'image/' + latin(b, 1, 3).toLowerCase().replace('jpg', 'jpeg'); p = 4; }
+  else { const e = nullEnd(b, 1, 0); mime = latin(b, 1, e - 1); p = e + 1; }
+  p += 1;
+  p = nullEnd(b, p, enc) + ((enc === 1 || enc === 2) ? 2 : 1);
+  if (!mime.includes('/')) mime = 'image/' + (mime || 'jpeg');
+  return { mime, data: b.subarray(p) };
+}
+async function parseID3(r, wantArt) {
+  const hd = await r.read(0, 10);
+  if (latin(hd, 0, 3) !== 'ID3') return null;
+  const ver = hd[3], flags = hd[5], end = 10 + syncsafe(hd, 6), v22 = ver === 2, hl = v22 ? 6 : 10;
+  let pos = 10;
+  if ((flags & 0x40) && ver >= 3) { const e = await r.read(10, 4); pos += ver === 4 ? syncsafe(e, 0) : u32(e, 0) + 4; }
+  const map = v22 ? { TT2: 'title', TP1: 'artist', TAL: 'album', TP2: 'albumArtist', TRK: 'track', TPA: 'disc' }
+                  : { TIT2: 'title', TPE1: 'artist', TALB: 'album', TPE2: 'albumArtist', TRCK: 'track', TPOS: 'disc' };
+  const out = {};
+  for (let guard = 0; pos + hl <= end && guard < 200; guard++) {
+    const fh = await r.read(pos, hl);
+    const id = latin(fh, 0, v22 ? 3 : 4);
+    if (!/^[A-Z0-9]{3,4}$/.test(id)) break;
+    const size = v22 ? (fh[3] << 16 | fh[4] << 8 | fh[5]) : ver === 4 ? syncsafe(fh, 4) : u32(fh, 4);
+    const body = pos + hl;
+    if (size <= 0 || body + size > end) break;
+    if (map[id] && !out[map[id]]) { const b = await r.read(body, size); out[map[id]] = decodeText(b.subarray(1), b[0]); }
+    else if (id === 'APIC' || id === 'PIC') { out.hasArt = true; if (wantArt && !out.art) out.art = apicFrame(await r.read(body, size), v22); }
+    pos = body + size;
+  }
+  out.end = end;
+  return out;
+}
+async function parseFLAC(r, wantArt, start = 0) {
+  if (latin(await r.read(start, 4), 0, 4) !== 'fLaC') return null;
+  const out = {}; let pos = start + 4;
+  const keys = { TITLE: 'title', ARTIST: 'artist', ALBUM: 'album', ALBUMARTIST: 'albumArtist', 'ALBUM ARTIST': 'albumArtist', TRACKNUMBER: 'track', DISCNUMBER: 'disc' };
+  for (let k = 0; k < 128; k++) {
+    const h4 = await r.read(pos, 4); if (h4.length < 4) break;
+    const last = h4[0] & 0x80, type = h4[0] & 0x7f, len = h4[1] << 16 | h4[2] << 8 | h4[3], body = pos + 4;
+    if (type === 4) {
+      const b = await r.read(body, len); let p = 4 + u32le(b, 0); const n = u32le(b, p); p += 4;
+      for (let i = 0; i < n && p + 4 <= b.length; i++) {
+        const l = u32le(b, p); const s = dec('utf-8', b.subarray(p + 4, p + 4 + l)); p += 4 + l;
+        const eq = s.indexOf('='); if (eq < 0) continue;
+        const key = keys[s.slice(0, eq).toUpperCase()]; if (key && !out[key]) out[key] = s.slice(eq + 1).trim();
+      }
+    } else if (type === 6) {
+      out.hasArt = true;
+      if (wantArt && !out.art) {
+        const b = await r.read(body, len); let p = 4; const ml = u32(b, p); const mime = latin(b, p + 4, ml); p += 4 + ml;
+        p += 4 + u32(b, p) + 16; const dl = u32(b, p);
+        out.art = { mime: mime || 'image/jpeg', data: b.subarray(p + 4, p + 4 + dl) };
+      }
+    }
+    pos = body + len; if (last) break;
+  }
+  return out;
+}
+async function findAtom(r, start, end, type) {
+  for (let p = start, g = 0; p + 8 <= end && g < 500; g++) {
+    const hd = await r.read(p, 8); let size = u32(hd, 0), hl = 8;
+    if (size === 1) { const x = await r.read(p + 8, 8); size = u32(x, 0) * 2 ** 32 + u32(x, 4); hl = 16; }
+    else if (size === 0) size = end - p;
+    if (size < hl) return null;
+    if (latin(hd, 4, 4) === type) return { body: p + hl, end: p + size };
+    p += size;
+  }
+  return null;
+}
+async function parseMP4(r, wantArt) {
+  if (latin(await r.read(4, 4), 0, 4) !== 'ftyp') return null;
+  const out = {};
+  const moov = await findAtom(r, 0, r.size, 'moov'); if (!moov) return out;
+  const udta = await findAtom(r, moov.body, moov.end, 'udta'); if (!udta) return out;
+  const meta = await findAtom(r, udta.body, udta.end, 'meta'); if (!meta) return out;
+  const ilst = await findAtom(r, meta.body + 4, meta.end, 'ilst'); if (!ilst) return out;
+  const keys = { '©nam': 'title', '©ART': 'artist', '©alb': 'album', aART: 'albumArtist', trkn: 'track', disk: 'disc', covr: 'art' };
+  for (let p = ilst.body, g = 0; p + 8 <= ilst.end && g < 300; g++) {
+    const hd = await r.read(p, 8); const size = u32(hd, 0), name = latin(hd, 4, 4);
+    if (size < 8) break;
+    const key = keys[name];
+    if (key && (key !== 'art' || wantArt) && !out[key]) {
+      const d = await findAtom(r, p + 8, p + size, 'data');
+      if (d) {
+        const b = await r.read(d.body, d.end - d.body), kind = u32(b, 0) & 0xffffff, v = b.subarray(8);
+        if (key === 'art') out.art = { mime: kind === 14 ? 'image/png' : 'image/jpeg', data: v };
+        else if (key === 'track' || key === 'disc') out[key] = (v[2] << 8 | v[3]) || null;
+        else out[key] = dec('utf-8', v).trim();
+      }
+    }
+    if (key === 'art') out.hasArt = true;
+    p += size;
+  }
+  return out;
+}
+let rangeOK = true;
+async function fetchRange(id, start, end) {
+  if (!tokenOk()) { needAuth(); throw new AuthNeeded(); }
+  let r;
+  try { r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: 'Bearer ' + S.token.value, Range: `bytes=${start}-${end}` } }); }
+  catch (e) { rangeOK = false; throw e; }
+  if (r.status === 401) { S.token = null; ls.del('token'); needAuth(); throw new AuthNeeded(); }
+  if (!r.ok) throw new Error('range ' + r.status);
+  const b = new Uint8Array(await r.arrayBuffer());
+  return (r.status === 200 && b.length > end - start + 1) ? b.subarray(start, end + 1) : b;
+}
+function rangeReader(id, size) {
+  const CH = 65536, chunks = new Map();
+  const chunk = i => { if (!chunks.has(i)) chunks.set(i, fetchRange(id, i * CH, Math.min(size, (i + 1) * CH) - 1)); return chunks.get(i); };
+  return {
+    size,
+    async read(off, len) {
+      len = Math.min(len, size - off); if (len <= 0) return new Uint8Array(0);
+      if (len > CH * 2) return fetchRange(id, off, off + len - 1);
+      const out = new Uint8Array(len); let p = 0;
+      while (p < len) {
+        const ci = Math.floor((off + p) / CH), c = await chunk(ci), s = off + p - ci * CH, n = Math.min(c.length - s, len - p);
+        if (n <= 0) break; out.set(c.subarray(s, s + n), p); p += n;
+      }
+      return out.subarray(0, p);
+    }
+  };
+}
+const blobReader = b => ({ size: b.size, async read(off, len) { return new Uint8Array(await b.slice(off, off + len).arrayBuffer()); } });
+async function readerFor(t, localOnly) {
+  try { const hit = await (await caches.open(C_AUDIO)).match(keyFor(C_AUDIO, t.id)); if (hit) return blobReader(await hit.blob()); } catch {}
+  if (localOnly || !rangeOK) return null;
+  let size = t.size;
+  if (!size) size = +(await drive('files/' + t.id, { fields: 'size', supportsAllDrives: true })).size || 0;
+  return size ? rangeReader(t.id, size) : null;
+}
+async function readTags(t, wantArt, localOnly) {
+  const r = await readerFor(t, localOnly);
+  if (!r) return null;
+  const head = await r.read(0, 12);
+  let tg = {};
+  if (latin(head, 0, 3) === 'ID3') {
+    tg = await parseID3(r, wantArt) || {};
+    const fl = tg.end ? await parseFLAC(r, wantArt, tg.end).catch(() => null) : null;
+    if (fl) tg = { ...tg, ...Object.fromEntries(Object.entries(fl).filter(([, v]) => v)) };
+  } else if (latin(head, 0, 4) === 'fLaC') tg = await parseFLAC(r, wantArt) || {};
+  else if (latin(head, 4, 4) === 'ftyp') tg = await parseMP4(r, wantArt) || {};
+  return tg;
+}
+function mode(arr) { const c = new Map(); let best = '', n = 0; for (const x of arr) { const k = (c.get(x) || 0) + 1; c.set(x, k); if (k > n) { n = k; best = x; } } return best; }
+function applyTags() {
+  for (const a of S.library) {
+    const tg = a.tracks.map(t => S.tags[t.id] || {});
+    a.tracks.forEach((t, i) => { const g = tg[i]; t.title = g.title || t.fileTitle; t.no = num(g.track) ?? t.fileNo; t.discNo = num(g.disc); t.artist = g.artist || ''; });
+    const albums = tg.map(g => g.album).filter(Boolean), aas = tg.map(g => g.albumArtist).filter(Boolean), arts = [...new Set(tg.map(g => g.artist).filter(Boolean))];
+    a.title = mode(albums) || a.folderTitle;
+    a.artist = mode(aas) || (arts.length === 1 ? arts[0] : '') || a.folderArtist || (arts.length > 1 ? '複数のアーティスト' : '');
+    if (tg.length && tg.every(g => num(g.track))) a.tracks.sort((x, y) => (x.discNo || 0) - (y.discNo || 0) || collator.compare(x.disc, y.disc) || x.no - y.no);
+    if (!a.embedArt) { const k = a.tracks.find(t => S.tags[t.id]?.hasArt); if (k) a.embedArt = k.id; }
+  }
+  S.library.sort((x, y) => collator.compare(x.artist || '￿', y.artist || '￿') || collator.compare(x.title, y.title));
+  rebuildIndex();
+}
+let enriching = false;
+async function enrichTags() {
+  if (enriching) return; enriching = true;
+  const todo = [];
+  for (const a of S.library) for (const t of a.tracks) { const g = S.tags[t.id]; if (!g || (g.size && t.size && g.size !== t.size)) todo.push({ a, t }); }
+  let done = 0;
+  const status = () => { const el = $('#tagStatus'); if (el) el.textContent = done < todo.length ? `曲情報を読み込み中 ${done}/${todo.length}` : ''; };
+  status();
+  try {
+    await pmap(todo, 3, async ({ a, t }) => {
+      try { const g = await readTags(t, false, a.localOnly || !tokenOk()); if (g) { const { title, artist, album, albumArtist, track, disc, hasArt } = g; S.tags[t.id] = { title, artist, album, albumArtist, track, disc, hasArt: !!hasArt, size: t.size }; } }
+      catch (e) { if (e instanceof AuthNeeded) throw e; if (rangeOK) S.tags[t.id] = { size: t.size }; }
+      done++; status();
+    });
+  } catch {}
+  enriching = false;
+  ls.set('tags', S.tags);
+  applyTags(); ls.set('library', S.library);
+  status();
+  if (todo.length) { softRender(); updatePlayerUI(); }
+}
+async function reloadTags() {
+  S.tags = {}; ls.set('tags', {}); rangeOK = true;
+  for (const a of S.library) { const k = artKey(a); if (k && coverURLs.has(k)) coverURLs.delete(k); a.embedArt = null; }
+  toast('曲情報を読み直しています'); goTab('albums'); enrichTags();
 }
 
-/* ---------- covers ---------- */
+/* ================= covers ================= */
 const coverURLs = new Map();
 function hue(s) { let x = 0; for (const ch of s) x = (x * 31 + ch.codePointAt(0)) >>> 0; return x % 360; }
+const artKey = a => a.cover || (a.embedArt ? 'emb-' + a.embedArt : null);
 function coverEl(album, cls = '') {
   const box = h('div', { class: 'cover ' + cls });
   const name = album ? (album.title || album.name) : '♪';
   const ph = h('div', { class: 'ph' }, [...name][0] || '♪');
   ph.style.background = `linear-gradient(135deg, hsl(${hue(name)} 42% 42%), hsl(${(hue(name) + 40) % 360} 38% 30%))`;
   box.append(ph);
-  if (album && album.cover) {
+  const key = album && artKey(album);
+  if (key) {
     const show = url => { box.replaceChildren(h('img', { src: url, alt: '', loading: 'lazy' })); };
-    if (coverURLs.has(album.cover)) show(coverURLs.get(album.cover));
-    else getBlob(C_IMG, album.cover).then(b => { const u = URL.createObjectURL(b); coverURLs.set(album.cover, u); show(u); }).catch(() => {});
+    if (coverURLs.has(key)) show(coverURLs.get(key));
+    else artURL(album).then(u => u && show(u));
   }
   return box;
 }
+const artPending = new Map();
+function artURL(a) {
+  const key = artKey(a); if (!key) return Promise.resolve(null);
+  if (coverURLs.has(key)) return Promise.resolve(coverURLs.get(key));
+  if (!artPending.has(key)) artPending.set(key, getArtBlob(a).then(b => { const u = URL.createObjectURL(b); coverURLs.set(key, u); return u; }).catch(() => null).finally(() => artPending.delete(key)));
+  return artPending.get(key);
+}
+async function getArtBlob(a) {
+  if (a.cover) {
+    try { const hit = await (await caches.open(C_IMG)).match(keyFor(C_IMG, a.cover)); if (hit) return await hit.blob(); } catch {}
+    if (!a.localOnly && tokenOk()) { try { return await getBlob(C_IMG, a.cover); } catch (e) { if (!a.embedArt) throw e; } }
+  }
+  if (!a.embedArt) throw new Error('no art');
+  const key = keyFor(C_IMG, 'emb-' + a.embedArt);
+  try { const hit = await (await caches.open(C_IMG)).match(key); if (hit) return await hit.blob(); } catch {}
+  const t = a.tracks.find(x => x.id === a.embedArt);
+  const tg = t && await readTags(t, true, a.localOnly || !tokenOk());
+  if (!tg?.art?.data?.length) throw new Error('no art');
+  const b = new Blob([tg.art.data], { type: tg.art.mime });
+  try { await (await caches.open(C_IMG)).put(key, new Response(b, { headers: { 'Content-Type': b.type } })); } catch {}
+  return b;
+}
 
-/* ---------- views ---------- */
+/* ================= playlists (この端末に保存) ================= */
+const savePl = () => ls.set('playlists', S.playlists);
+const plGet = id => S.playlists.find(p => p.id === id);
+const fav = () => { let p = plGet('fav'); if (!p) { p = { id: 'fav', name: 'お気に入り', ids: [] }; S.playlists.unshift(p); } return p; };
+const isFav = id => fav().ids.includes(id);
+function toggleFav(id) {
+  const p = fav(), i = p.ids.indexOf(id);
+  if (i >= 0) { p.ids.splice(i, 1); toast('お気に入りから外しました'); } else { p.ids.unshift(id); toast('お気に入りに追加しました'); }
+  savePl(); updatePlayerUI(); softRender();
+}
+function createPl(name) { const p = { id: 'p' + Date.now().toString(36), name, ids: [] }; S.playlists.push(p); savePl(); return p; }
+function addToPl(p, ids) {
+  const add = ids.filter(id => !p.ids.includes(id));
+  p.ids.push(...add); savePl();
+  toast(add.length ? `「${p.name}」に${add.length}曲追加しました` : `すでに「${p.name}」に入っています`);
+}
+const plTracks = p => p.ids.map(id => IDX.get(id)?.t).filter(Boolean);
+
+/* ================= small UI helpers ================= */
+function menu(title, items) {
+  const back = h('div', { class: 'menu-back' });
+  const close = () => back.remove();
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+  back.append(h('div', { class: 'menu', role: 'dialog', 'aria-label': title || 'メニュー' },
+    title ? h('div', { class: 'mt' }, title) : null,
+    items.filter(Boolean).map(it => h('button', { class: it.danger ? 'danger' : '', onclick: () => { close(); it.run(); } }, it.icon ? icon(it.icon) : null, it.label)),
+    h('button', { class: 'cancel', onclick: close }, 'キャンセル')));
+  document.body.append(back);
+}
+function askText(title, value = '', ok = '保存') {
+  return new Promise(res => {
+    const back = h('div', { class: 'menu-back' });
+    const input = h('input', { class: 'field', id: 'askText', value, maxlength: '60', autocomplete: 'off' });
+    const done = v => { back.remove(); res(v); };
+    back.addEventListener('click', e => { if (e.target === back) done(null); });
+    const form = h('form', { onsubmit: e => { e.preventDefault(); const v = input.value.trim(); if (v) done(v); } },
+      h('label', { class: 'label', for: 'askText' }, title), input,
+      h('div', { class: 'row' }, h('button', { class: 'btn', type: 'submit' }, ok), h('button', { class: 'btn ghost', type: 'button', onclick: () => done(null) }, 'キャンセル')));
+    back.append(h('div', { class: 'menu' }, form));
+    document.body.append(back);
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+  });
+}
+function confirmMenu(title, label, run) { menu(title, [{ label, danger: true, icon: 'i-trash', run }]); }
+function choosePlaylist(ids) {
+  const lists = S.playlists.filter(p => p.id !== 'fav');
+  menu(ids.length === 1 ? 'プレイリストに追加' : `${ids.length}曲をプレイリストに追加`, [
+    { label: '新しいプレイリスト…', icon: 'i-plus', run: async () => { const n = await askText('新しいプレイリストの名前', '', '作成して追加'); if (n) { addToPl(createPl(n), ids); softRender(); } } },
+    ...lists.map(p => ({ label: `${p.name}（${p.ids.length}曲）`, icon: 'i-playlist', run: () => { addToPl(p, ids); softRender(); } }))
+  ]);
+}
+function trackMenu(t, extra = []) {
+  const a = albumOf(t);
+  menu(t.title, [
+    isFav(t.id) ? { label: 'お気に入りから外す', icon: 'i-heart', run: () => toggleFav(t.id) } : { label: 'お気に入りに追加', icon: 'i-heart-o', run: () => toggleFav(t.id) },
+    { label: 'プレイリストに追加…', icon: 'i-playlist', run: () => choosePlaylist([t.id]) },
+    a && !(S.view.name === 'album' && S.view.id === a.id) ? { label: 'アルバムを開く', icon: 'i-album', run: () => go({ name: 'album', id: a.id, parent: S.tab }) } : null,
+    ...extra
+  ]);
+}
+// 曲の行：左(番号またはジャケット)・曲名・状態(再生中/保存済み)・…ボタン
+function trackRow(t, { lead = 'art', num: n, sub, onPlay, extra }) {
+  const a = albumOf(t);
+  return h('li', { class: 'trk', 'data-id': t.id },
+    h('button', { class: 'trk-main', onclick: () => { unlock(); onPlay(); } },
+      lead === 'num' ? h('span', { class: 'n' }, n ?? '') : coverEl(a, 'thumb'),
+      h('span', { class: 'nm' }, h('span', { class: 'tt' }, t.title), sub ? h('small', {}, sub) : null),
+      h('span', { class: 'st' })),
+    h('button', { class: 'iconbtn more', 'aria-label': t.title + 'の操作', onclick: () => trackMenu(t, extra ? extra() : []) }, icon('i-more')));
+}
+function refreshRows() {
+  const cur = curTrack(), playing = !audio.paused && !!curURL;
+  document.querySelectorAll('.trk').forEach(el => {
+    const id = el.dataset.id, on = !!cur && cur.id === id, st = el.querySelector('.st');
+    el.classList.toggle('on', on);
+    const want = on ? 'eq' : cached.has(id) ? 'dot' : '';
+    if (st.dataset.s !== want) { st.dataset.s = want; st.replaceChildren(want === 'eq' ? h('span', { class: 'eq' }, h('i'), h('i'), h('i')) : want === 'dot' ? h('span', { class: 'dot', title: '端末に保存済み' }) : ''); }
+    const eq = st.querySelector('.eq'); if (eq) eq.classList.toggle('paused', !playing);
+  });
+}
+function searchBox(key, placeholder, onChange) {
+  const input = h('input', { type: 'search', id: 'q-' + key, value: S.q[key], placeholder, autocomplete: 'off', enterkeyhint: 'search' });
+  input.addEventListener('input', () => { S.q[key] = input.value; onChange(); });
+  return h('div', { class: 'search' }, icon('i-search'), input);
+}
+
+/* ================= views ================= */
 function setTop(title, { back = false, refresh = false } = {}) {
   $('#title').textContent = title; $('#backBtn').hidden = !back; $('#refreshBtn').hidden = !refresh;
 }
 function go(view) { S.view = view; render(); window.scrollTo(0, 0); }
+function goTab(tab) { S.tab = tab; go({ name: tab }); }
 function needAuth() { $('#authBanner').hidden = !S.clientId; }
-
+// 裏で情報が更新されたとき：入力中の検索欄を壊さないよう、一覧系の画面だけ描き直す
+function softRender() {
+  if (document.activeElement && document.activeElement.type === 'search') { refreshRows(); return; }
+  if (['albums', 'album', 'playlists', 'playlist', 'songs'].includes(S.view.name)) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+  else refreshRows();
+}
 function render() {
   const v = $('#view'); v.replaceChildren();
+  const onboarding = !S.clientId || (!S.root && !tokenOk());
+  document.body.classList.toggle('notabs', onboarding || !S.root);
+  $('#tabs').hidden = onboarding || !S.root;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   if (!S.clientId) return renderSetup(v);
   if (S.view.name === 'settings') return renderSettings(v);
   if (!S.root) { if (!tokenOk()) return renderLogin(v); return renderPicker(v); }
-  if (S.view.name === 'picker') return renderPicker(v);
-  if (S.view.name === 'album') { const a = S.library.find(x => x.id === S.view.id); if (a) return renderAlbum(v, a); }
-  renderLibrary(v);
+  const n = S.view.name;
+  if (n === 'picker') renderPicker(v);
+  else if (n === 'album') { const a = S.library.find(x => x.id === S.view.id); a ? renderAlbum(v, a) : renderAlbums(v); }
+  else if (n === 'playlist') { const p = plGet(S.view.id); p ? renderPlaylist(v, p) : renderPlaylists(v); }
+  else if (n === 'playlists') renderPlaylists(v);
+  else if (n === 'songs') renderSongs(v);
+  else renderAlbums(v);
+  refreshRows();
 }
 
 function renderSetup(v) {
@@ -427,19 +873,15 @@ function renderSetup(v) {
     h('div', { class: 'card stack' },
       h('div', { class: 'label' }, 'Google Cloudに登録するURL'),
       h('div', { class: 'small muted' }, '「承認済みのJavaScript生成元」には先頭のドメイン部分、「承認済みのリダイレクトURI」にはこのURLをそのまま登録します。'),
-      h('div', { class: 'code', id: 'redir' }, REDIRECT),
-      h('div', { class: 'row' }, copy)),
+      h('div', { class: 'code' }, REDIRECT), h('div', { class: 'row' }, copy)),
     h('div', { class: 'card stack' },
-      h('label', { class: 'label', for: 'cid' }, 'OAuthクライアントID'),
-      input,
+      h('label', { class: 'label', for: 'cid' }, 'OAuthクライアントID'), input,
       h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => {
         const val = input.value.trim();
         if (!/\.apps\.googleusercontent\.com$/.test(val)) { toast('クライアントIDは「.apps.googleusercontent.com」で終わる文字列です'); return; }
         S.clientId = val; ls.set('clientId', val); render();
-      } }, '保存して次へ')))
-  ));
+      } }, '保存して次へ')))));
 }
-
 function renderLogin(v) {
   setTop('レコード棚');
   v.append(h('div', { class: 'card stack', style: 'text-align:center;padding:32px 18px' },
@@ -447,108 +889,241 @@ function renderLogin(v) {
     h('p', { class: 'muted', style: 'margin:0;line-height:1.7' }, 'Googleアカウントでログインすると、Driveのフォルダを読み取り専用で参照します。ファイルを書き換えることはありません。'),
     h('div', {}, h('button', { class: 'btn', onclick: () => login(false) }, 'Googleでログイン'))));
 }
-
 function renderPicker(v) {
   setTop('音楽フォルダを選ぶ', { back: !!S.root });
   const list = h('ul', { class: 'list' });
   const q = h('input', { class: 'field', id: 'fq', placeholder: 'フォルダ名で検索、またはフォルダのURLを貼り付け', autocomplete: 'off' });
-  const choose = async f => {
-    S.root = { id: f.id, name: f.name }; ls.set('root', S.root);
-    S.library = []; ls.set('library', []);
-    go({ name: 'library' }); refresh();
-  };
+  const choose = f => { S.root = { id: f.id, name: f.name }; ls.set('root', S.root); S.library = []; rebuildIndex(); ls.set('library', []); goTab('albums'); refresh(); };
+  const msg = t => h('li', { class: 'muted small', style: 'padding:12px 4px' }, t);
   let timer;
   const load = async () => {
-    list.replaceChildren(h('li', { class: 'muted small', style: 'padding:12px 4px' }, h('span', { class: 'spin' })));
+    list.replaceChildren(msg(h('span', { class: 'spin' })));
     const text = q.value.trim();
     try {
       const m = text.match(/folders\/([\w-]{10,})/) || text.match(/^([\w-]{25,})$/);
       let files;
-      if (m) { files = [await drive('files/' + m[1], { fields: 'id,name,mimeType', supportsAllDrives: true })].filter(isFolder); }
+      if (m) files = [await drive('files/' + m[1], { fields: 'id,name,mimeType', supportsAllDrives: true })].filter(isFolder);
       else {
         const query = text ? `mimeType='${FOLDER}' and trashed=false and name contains '${qEsc(text)}'` : `mimeType='${FOLDER}' and trashed=false and 'root' in parents`;
         files = (await drive('files', { q: query, fields: 'files(id,name)', pageSize: 100, orderBy: 'name', supportsAllDrives: true, includeItemsFromAllDrives: true })).files || [];
       }
-      list.replaceChildren(...(files.length ? files.map(f => h('li', {}, h('button', { onclick: () => choose(f) }, icon('i-folder'), f.name))) : [h('li', { class: 'muted small', style: 'padding:12px 4px' }, '見つかりませんでした')]));
-    } catch (e) { if (!(e instanceof AuthNeeded)) list.replaceChildren(h('li', { class: 'muted small', style: 'padding:12px 4px' }, '読み込みに失敗しました。通信状態を確認してください。')); }
+      list.replaceChildren(...(files.length ? files.map(f => h('li', {}, h('button', { onclick: () => choose(f) }, h('span', { class: 'ico plain' }, icon('i-folder')), h('span', { class: 'grow' }, h('b', {}, f.name))))) : [msg('見つかりませんでした')]));
+    } catch (e) { if (!(e instanceof AuthNeeded)) list.replaceChildren(msg('読み込みに失敗しました。通信状態を確認してください。')); }
   };
   q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 350); });
-  v.append(h('div', { class: 'stack' },
-    h('p', { class: 'muted', style: 'margin:0;line-height:1.7' }, 'アルバムのフォルダがまとめて入っている親フォルダを選んでください。中のフォルダ1つが1アルバムになります。'),
-    q, list));
+  v.append(h('div', { class: 'stack' }, h('p', { class: 'muted', style: 'margin:0;line-height:1.7' }, 'アルバムのフォルダがまとめて入っている親フォルダを選んでください。中のフォルダ1つが1アルバムになります。'), q, list));
   load();
 }
 
-function albumSaved(a) { return a.tracks.every(t => cached.has(t.id)); }
+const albumSaved = a => a.tracks.every(t => cached.has(t.id));
 
-function renderLibrary(v) {
-  setTop('レコード棚', { refresh: true });
-  const head = h('div', { class: 'shelf-head' },
-    h('div', {}, h('div', { class: 'label' }, S.root?.name || ''),
-      h('div', { class: 'small muted' }, S.library.length ? `${S.library.length}枚・${S.library.reduce((n, a) => n + a.tracks.length, 0)}曲` : '')));
-  v.append(head);
+/* --- アルバム --- */
+function renderAlbums(v) {
+  setTop('アルバム', { refresh: true });
   if (!S.library.length) {
     v.append(h('div', { class: 'empty' }, S.scannedAt
       ? ['まだ曲が見つかりません。', h('br'), '「', S.root.name, '」の中にアルバムごとのフォルダを作り、曲を入れてから右上の更新ボタンを押してください。']
       : [h('span', { class: 'spin' }), h('br'), 'Driveを読み込んでいます…']));
     return;
   }
-  v.append(h('div', { class: 'grid' }, S.library.map(a => h('button', { class: 'sleeve', onclick: () => go({ name: 'album', id: a.id }) },
-    coverEl(a),
-    h('div', { class: 't' }, a.title),
-    h('div', { class: 'a' }, a.artist || `${a.tracks.length}曲`),
-    albumSaved(a) ? h('div', {}, h('span', { class: 'chip' }, '端末に保存済み')) : null))));
+  const grid = h('div', { class: 'grid' });
+  const info = h('div', { class: 'meta-line' });
+  const draw = () => {
+    const q = norm(S.q.albums);
+    const list = S.library.filter(a => !q || norm(a.title + ' ' + a.artist + ' ' + a.tracks.map(t => t.artist).join(' ')).includes(q));
+    info.replaceChildren(h('span', {}, q ? `${list.length}枚が該当` : `${S.library.length}枚・${IDX.size}曲`), h('span', { id: 'tagStatus' }));
+    grid.replaceChildren(...(list.length ? list.map(a => h('button', { class: 'sleeve', onclick: () => go({ name: 'album', id: a.id, parent: 'albums' }) },
+      coverEl(a), h('div', { class: 't' }, a.title), h('div', { class: 'a' }, a.artist || `${a.tracks.length}曲`),
+      a.localOnly ? h('div', {}, h('span', { class: 'chip warn' }, '端末のみ')) : albumSaved(a) ? h('div', {}, h('span', { class: 'chip' }, '端末に保存済み')) : null))
+      : [h('div', { class: 'empty' }, '見つかりませんでした')]));
+  };
+  v.append(h('div', { class: 'tools' }, searchBox('albums', 'アルバム・アーティストを検索', draw)), h('div', { style: 'margin:-4px 0 12px' }, info), grid);
+  draw();
 }
-
+function deleteLocalButton(label, onDelete) {
+  let armed = null;
+  return h('button', { class: 'btn ghost danger', onclick: async e => {
+    const b = e.currentTarget;
+    if (!armed) { b.textContent = 'もう一度押すと削除'; armed = setTimeout(() => { armed = null; b.textContent = label; }, 4000); return; }
+    clearTimeout(armed); armed = null; await onDelete();
+  } }, label);
+}
 let saving = null;
 function renderAlbum(v, a) {
   setTop(a.title, { back: true });
-  const playing = S.albumId === a.id;
-  const saveBtn = h('button', { class: 'btn ghost', id: 'saveBtn', onclick: () => saveAlbum(a) }, icon(albumSaved(a) ? 'i-check' : 'i-save'), albumSaved(a) ? '保存済み' : '端末に保存');
-  if (saving === a.id) saveBtn.disabled = true;
-  v.append(h('div', { class: 'album-hero' }, coverEl(a),
+  const saved = savedBytes(a.tracks), total = bytesOf(a.tracks);
+  const saveBtn = a.localOnly ? null : h('button', { class: 'btn ghost', id: 'saveBtn', disabled: saving === a.id, onclick: () => saveTracks(a.tracks, a.title) }, icon(albumSaved(a) ? 'i-check' : 'i-save'), albumSaved(a) ? '保存済み' : '端末に保存');
+  const delBtn = saved ? deleteLocalButton('端末から削除', async () => {
+    if (albumOf(curTrack())?.id === a.id && !audio.paused) audio.pause();
+    await removeAlbumLocal(a); toast('「' + a.title + '」を端末から削除しました');
+    a.localOnly ? go({ name: 'albums' }) : render();
+  }) : null;
+  v.append(h('div', { class: 'hero' }, coverEl(a),
     h('div', { class: 'meta' },
       a.artist ? h('div', { class: 'label' }, a.artist) : null,
       h('h2', { class: 'h2' }, a.title),
-      h('div', { class: 'small muted' }, `${a.tracks.length}曲`),
+      h('div', { class: 'meta-line' }, h('span', {}, `${a.tracks.length}曲`), total ? h('span', {}, `端末に保存 ${fmtMB(saved)} / ${fmtMB(total)}`) : null),
+      a.localOnly ? h('div', { class: 'small', style: 'color:var(--warn)' }, 'Driveから削除済み。この端末に保存された曲だけで再生しています。') : null,
       h('div', { class: 'row', style: 'margin-top:6px' },
-        h('button', { class: 'btn', onclick: () => { unlock(); playAlbum(a, 0, false); } }, icon('i-play'), '再生'),
-        h('button', { class: 'btn ghost', onclick: () => { unlock(); playAlbum(a, 0, true); } }, icon('i-shuffle'), 'シャッフル'),
-        saveBtn))));
-  let lastDisc = null;
-  const items = [];
+        h('button', { class: 'btn', onclick: () => { unlock(); playList(a.tracks, 0, false, { type: 'album', id: a.id, title: a.title }); } }, icon('i-play'), '再生'),
+        h('button', { class: 'btn ghost', onclick: () => { unlock(); playList(a.tracks, 0, true, { type: 'album', id: a.id, title: a.title }); } }, icon('i-shuffle'), 'シャッフル')),
+      h('div', { class: 'row' }, saveBtn, delBtn,
+        h('button', { class: 'btn ghost', onclick: () => choosePlaylist(a.tracks.map(t => t.id)) }, icon('i-plus'), 'プレイリストへ')))));
+  let lastDisc = null; const items = [];
   a.tracks.forEach((t, i) => {
-    if (t.disc && t.disc !== lastDisc) { items.push(h('li', { class: 'label', style: 'padding:14px 4px 6px' }, t.disc)); lastDisc = t.disc; }
-    const on = playing && S.queue[S.qi]?.id === t.id;
-    items.push(h('li', {}, h('button', { class: 'trk' + (on ? ' on' : ''), 'data-id': t.id, onclick: () => { unlock(); playAlbum(a, i, false); } },
-      h('span', { class: 'n' }, on ? h('span', { class: 'eq' + (audio.paused ? ' paused' : '') }, h('i'), h('i'), h('i')) : (t.no ?? i + 1)),
-      h('span', { class: 'nm' }, t.title),
-      cached.has(t.id) ? h('span', { class: 'dot', title: '端末に保存済み' }) : h('span'))));
+    const dl = t.disc || (t.discNo && a.tracks.some(x => x.discNo && x.discNo !== t.discNo) ? 'Disc ' + t.discNo : '');
+    if (dl && dl !== lastDisc) { items.push(h('li', { class: 'label disc-h' }, dl)); lastDisc = dl; }
+    items.push(trackRow(t, { lead: 'num', num: t.no ?? i + 1, sub: t.artist && t.artist !== a.artist ? t.artist : '', onPlay: () => playList(a.tracks, i, false, { type: 'album', id: a.id, title: a.title }) }));
   });
   v.append(h('ul', { class: 'tracks' }, items));
 }
 
-async function saveAlbum(a) {
-  if (saving) return;
-  saving = a.id;
-  const todo = a.tracks.filter(t => !cached.has(t.id));
-  try { await navigator.storage?.persist?.(); } catch {}
-  let n = 0;
-  const label = () => { const b = $('#saveBtn'); if (b) { b.disabled = true; b.replaceChildren(h('span', { class: 'spin' }), `保存中 ${n}/${todo.length}`); } };
-  label();
-  try {
-    if (a.cover) await getBlob(C_IMG, a.cover).catch(() => {});
-    for (const t of todo) { await getBlob(C_AUDIO, t.id); n++; label(); }
-    toast('「' + a.title + '」を端末に保存しました');
-  } catch (e) { if (!(e instanceof AuthNeeded)) toast('保存の途中で失敗しました。もう一度お試しください'); }
-  saving = null;
-  if (S.view.name === 'album') render();
+/* --- プレイリスト --- */
+function plArt(p, big) {
+  if (p.id === 'fav') return h('div', { class: big ? 'pl-art fav' : 'ico fav' }, icon('i-heart'));
+  const albums = [...new Set(plTracks(p).map(t => albumOf(t)))].filter(Boolean);
+  if (!big) return h('span', { class: 'ico' }, albums.length ? coverEl(albums[0]) : icon('i-playlist'));
+  if (albums.length < 4) return albums.length ? coverEl(albums[0]) : h('div', { class: 'pl-art' }, h('div', { class: 'ico', style: 'grid-column:1/-1;display:grid;place-items:center;background:var(--accent-soft)' }, icon('i-playlist')));
+  return h('div', { class: 'pl-art' }, albums.slice(0, 4).map(a => coverEl(a)));
+}
+function renderPlaylists(v) {
+  setTop('プレイリスト');
+  const list = h('ul', { class: 'list' });
+  const draw = () => {
+    const q = norm(S.q.playlists);
+    const ps = S.playlists.filter(p => !q || norm(p.name).includes(q));
+    list.replaceChildren(...ps.map(p => {
+      const ts = plTracks(p);
+      return h('li', {}, h('button', { onclick: () => go({ name: 'playlist', id: p.id, parent: 'playlists' }) },
+        plArt(p, false), h('span', { class: 'grow' }, h('b', {}, p.name), h('span', {}, `${ts.length}曲` + (ts.length && ts.every(t => cached.has(t.id)) ? '・端末に保存済み' : '')))));
+    }));
+    if (!ps.length) list.replaceChildren(h('li', { class: 'empty' }, '見つかりませんでした'));
+  };
+  v.append(h('div', { class: 'tools' }, searchBox('playlists', 'プレイリストを検索', draw),
+    h('button', { class: 'btn', onclick: async () => { const n = await askText('新しいプレイリストの名前', '', '作成'); if (n) { const p = createPl(n); go({ name: 'playlist', id: p.id, parent: 'playlists' }); } } }, icon('i-plus'), '新規')), list);
+  draw();
+  if (S.playlists.length === 1 && !fav().ids.length) v.append(h('p', { class: 'small muted', style: 'line-height:1.7;margin-top:16px' }, '曲の右の「…」から、お気に入りやプレイリストに追加できます。プレイリストはこの端末に保存されます。'));
+}
+function renderPlaylist(v, p) {
+  setTop(p.name, { back: true });
+  const ts = plTracks(p), missing = p.ids.length - ts.length;
+  const ctx = { type: 'playlist', id: p.id, title: p.name };
+  const saved = savedBytes(ts), total = bytesOf(ts);
+  const more = h('button', { class: 'btn ghost', 'aria-label': 'プレイリストの操作', onclick: () => menu(p.name, [
+    p.id !== 'fav' ? { label: '名前を変更', icon: 'i-edit', run: async () => { const n = await askText('プレイリストの名前', p.name); if (n) { p.name = n; savePl(); render(); } } } : null,
+    missing ? { label: `見つからない曲（${missing}曲）を外す`, icon: 'i-trash', run: () => { p.ids = p.ids.filter(id => IDX.has(id)); savePl(); render(); } } : null,
+    p.id !== 'fav' ? { label: 'プレイリストを削除', icon: 'i-trash', danger: true, run: () => confirmMenu(`「${p.name}」を削除します。曲そのものは消えません。`, '削除する', () => { S.playlists = S.playlists.filter(x => x !== p); savePl(); go({ name: 'playlists' }); }) } : null
+  ]) }, icon('i-more'));
+  v.append(h('div', { class: 'hero' }, plArt(p, true),
+    h('div', { class: 'meta' },
+      h('div', { class: 'label' }, 'プレイリスト'),
+      h('h2', { class: 'h2' }, p.name),
+      h('div', { class: 'meta-line' }, h('span', {}, `${ts.length}曲`), total ? h('span', {}, `端末に保存 ${fmtMB(saved)} / ${fmtMB(total)}`) : null),
+      missing ? h('div', { class: 'small', style: 'color:var(--warn)' }, `${missing}曲がDriveにも端末にも見つかりません`) : null,
+      h('div', { class: 'row', style: 'margin-top:6px' },
+        h('button', { class: 'btn', disabled: !ts.length, onclick: () => { unlock(); playList(ts, 0, false, ctx); } }, icon('i-play'), '再生'),
+        h('button', { class: 'btn ghost', disabled: !ts.length, onclick: () => { unlock(); playList(ts, 0, true, ctx); } }, icon('i-shuffle'), 'シャッフル')),
+      h('div', { class: 'row' },
+        ts.length ? h('button', { class: 'btn ghost', id: 'saveBtn', disabled: saving === p.id, onclick: () => saveTracks(ts, p.name, p.id) }, icon(ts.every(t => cached.has(t.id)) ? 'i-check' : 'i-save'), ts.every(t => cached.has(t.id)) ? '保存済み' : '端末に保存') : null,
+        more))));
+  if (!ts.length) { v.append(h('div', { class: 'empty' }, p.id === 'fav' ? '曲の右の「…」や再生画面の♡から、お気に入りに追加できます。' : '曲の右の「…」→「プレイリストに追加」で曲を入れられます。')); return; }
+  v.append(h('ul', { class: 'tracks' }, ts.map((t, i) => {
+    const a = albumOf(t);
+    return trackRow(t, { sub: [t.artist || a?.artist, a?.title].filter(Boolean).join(' — '), onPlay: () => playList(ts, i, false, ctx),
+      extra: () => [
+        { label: 'このプレイリストから外す', icon: 'i-trash', danger: true, run: () => { p.ids.splice(p.ids.indexOf(t.id), 1); savePl(); render(); } },
+        i > 0 ? { label: '上へ移動', icon: 'i-up', run: () => movePl(p, t.id, -1) } : null,
+        i < ts.length - 1 ? { label: '下へ移動', icon: 'i-dn', run: () => movePl(p, t.id, 1) } : null,
+        i > 0 ? { label: 'いちばん上へ', icon: 'i-up', run: () => movePl(p, t.id, -Infinity) } : null
+      ] });
+  })));
+}
+function movePl(p, id, dir) {
+  const visible = p.ids.filter(x => IDX.has(x)), i = visible.indexOf(id);
+  const j = dir === -Infinity ? 0 : Math.max(0, Math.min(visible.length - 1, i + dir));
+  visible.splice(i, 1); visible.splice(j, 0, id);
+  p.ids = visible.concat(p.ids.filter(x => !IDX.has(x)));
+  savePl(); softRender();
 }
 
+/* --- 曲 --- */
+function songsSorted() {
+  const all = [...IDX.values()];
+  const key = {
+    title: (x, y) => collator.compare(x.t.title, y.t.title),
+    artist: (x, y) => collator.compare(x.t.artist || x.a.artist, y.t.artist || y.a.artist) || collator.compare(x.a.title, y.a.title) || (x.t.discNo || 0) - (y.t.discNo || 0) || (x.t.no || 0) - (y.t.no || 0),
+    album: (x, y) => collator.compare(x.a.title, y.a.title) || (x.t.discNo || 0) - (y.t.discNo || 0) || (x.t.no || 0) - (y.t.no || 0)
+  }[S.songSort] || ((x, y) => 0);
+  return all.sort(key);
+}
+function renderSongs(v) {
+  setTop('曲', { refresh: true });
+  const list = h('ul', { class: 'tracks' }), info = h('div', { class: 'meta-line', style: 'margin:-4px 0 12px' });
+  const sort = h('select', { class: 'select', id: 'songSort', 'aria-label': '並び順' },
+    [['title', '曲名順'], ['artist', 'アーティスト順'], ['album', 'アルバム順']].map(([k, l]) => h('option', { value: k, selected: S.songSort === k }, l)));
+  sort.addEventListener('change', () => { S.songSort = sort.value; ls.set('songSort', S.songSort); draw(); });
+  const draw = () => {
+    const q = norm(S.q.songs);
+    const rows = songsSorted().filter(({ t, a }) => !q || norm(t.title + ' ' + t.artist + ' ' + a.artist + ' ' + a.title).includes(q));
+    const ts = rows.map(r => r.t);
+    const ctx = { type: 'songs', title: q ? `「${S.q.songs}」の検索結果` : 'すべての曲' };
+    info.replaceChildren(h('span', {}, q ? `${ts.length}曲が該当` : `${ts.length}曲`),
+      ts.length ? h('button', { class: 'btn sm', onclick: () => { unlock(); playList(ts, 0, true, ctx); } }, icon('i-shuffle'), 'シャッフル再生') : null);
+    list.replaceChildren(...(rows.length ? rows.map(({ t, a }, i) => trackRow(t, { sub: [t.artist || a.artist, a.title].filter(Boolean).join(' — '), onPlay: () => playList(ts, i, false, ctx) }))
+      : [h('li', { class: 'empty' }, S.library.length ? '見つかりませんでした' : 'まだ曲がありません')]));
+    refreshRows();
+  };
+  info.style.alignItems = 'center';
+  v.append(h('div', { class: 'tools' }, searchBox('songs', '曲名・アーティスト・アルバムを検索', draw), sort), info, list);
+  draw();
+}
+
+/* --- 保存 --- */
+async function saveTracks(tracks, label, key) {
+  if (saving) return;
+  saving = key || albumOf(tracks[0])?.id;
+  const todo = tracks.filter(t => !cached.has(t.id));
+  try { await navigator.storage?.persist?.(); } catch {}
+  let n = 0;
+  const show = () => { const b = $('#saveBtn'); if (b) { b.disabled = true; b.replaceChildren(h('span', { class: 'spin' }), `保存中 ${n}/${todo.length}`); } };
+  show();
+  try {
+    for (const a of new Set(tracks.map(albumOf).filter(Boolean))) await getArtBlob(a).catch(() => {});
+    for (const t of todo) { await getBlob(C_AUDIO, t.id); n++; show(); }
+    toast('「' + label + '」を端末に保存しました');
+  } catch (e) { if (!(e instanceof AuthNeeded)) toast('保存の途中で失敗しました。もう一度お試しください'); }
+  saving = null;
+  softRender();
+}
+
+/* --- 設定 --- */
 async function renderSettings(v) {
   setTop('設定', { back: true });
   const usage = h('dd', {}, '計算中…');
+  const auto = h('input', { type: 'checkbox', id: 'autoSave', role: 'switch', checked: S.autoSave });
+  auto.addEventListener('change', () => { S.autoSave = auto.checked; ls.set('autoSave', S.autoSave); toast(S.autoSave ? '自動保存をオンにしました' : '自動保存をオフにしました'); });
+  const breakdown = h('ul', { class: 'usage' });
+  const albumsSaved = S.library.map(a => ({ a, b: savedBytes(a.tracks) })).filter(x => x.b > 0).sort((x, y) => y.b - x.b);
+  const max = albumsSaved[0]?.b || 1;
+  breakdown.append(...albumsSaved.map(({ a, b }) => h('li', {},
+    coverEl(a, 'thumb'),
+    h('div', { class: 'grow' }, h('b', {}, a.title), h('span', {}, `${fmtMB(b)}` + (a.localOnly ? '・端末のみ' : `（全体 ${fmtMB(bytesOf(a.tracks))}）`)), h('div', { class: 'meter' }, h('i', { style: `width:${Math.max(2, b / max * 100)}%` }))),
+    deleteLocalButton('削除', async () => { await removeAlbumLocal(a); toast('「' + a.title + '」を端末から削除しました'); render(); }))));
+  if (!albumsSaved.length) breakdown.append(h('li', { class: 'small muted' }, '端末に保存した曲はまだありません'));
+  const orphanLi = h('li', { hidden: true });
+  breakdown.append(orphanLi);
   v.append(h('div', { class: 'stack settings' },
+    h('div', { class: 'card stack' },
+      h('div', { class: 'label' }, '通信と保存'),
+      h('label', { class: 'switch', for: 'autoSave' },
+        h('span', {}, h('b', {}, '再生中にアルバムの残りも保存する'), h('br'),
+          h('span', { class: 'small muted', style: 'line-height:1.6' }, 'オン：再生を始めると、そのアルバムやプレイリストの残りの曲も先に取り寄せて保存します。ログインの期限が切れても続けて聴けます。', h('br'), 'オフ：再生中の曲と次の1曲だけを取り寄せます。モバイル通信の量を抑えたいときに。')),
+        auto)),
+    h('div', { class: 'card stack' },
+      h('div', { class: 'label' }, 'この端末に保存した曲'),
+      h('dl', {}, h('dt', {}, '保存済み'), h('dd', {}, `${cached.size}曲`), h('dt', {}, '使用容量'), usage),
+      breakdown,
+      h('div', { class: 'row' }, deleteLocalButton('保存データをすべて削除', async () => { await clearCaches(); toast('端末の保存データを削除しました'); render(); }))),
     h('div', { class: 'card stack' },
       h('div', { class: 'label' }, 'DRIVE'),
       h('dl', {},
@@ -560,31 +1135,40 @@ async function renderSettings(v) {
         tokenOk() ? h('button', { class: 'btn ghost', onclick: () => { logout(); toast('ログアウトしました'); render(); } }, 'ログアウト')
                   : h('button', { class: 'btn ghost', onclick: () => login(false) }, 'ログイン'))),
     h('div', { class: 'card stack' },
-      h('div', { class: 'label' }, 'この端末'),
-      h('dl', {}, h('dt', {}, '保存済みの曲'), h('dd', {}, cached.size + '曲'), h('dt', {}, '使用容量'), usage),
-      h('p', { class: 'small muted', style: 'margin:0;line-height:1.6' }, '一度再生した曲とアルバムの残り曲は自動で端末に保存され、次からは通信なしで再生できます。'),
-      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: async () => { await clearCaches(); toast('端末の保存データを削除しました'); render(); } }, '保存データを削除'))),
+      h('div', { class: 'label' }, '曲情報'),
+      h('p', { class: 'small muted', style: 'margin:0;line-height:1.6' }, '曲ファイルに入っているジャケット、アルバム名、アーティスト名、曲名、曲番号を表示に使います。情報がない曲はフォルダ名とファイル名で表示します。'),
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: reloadTags }, '曲情報を読み直す'))),
     h('div', { class: 'card stack' },
       h('div', { class: 'label' }, 'GOOGLE CLOUD'),
       h('dl', {}, h('dt', {}, 'クライアントID'), h('dd', { class: 'small' }, S.clientId)),
-      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => { logout(); S.clientId = ''; ls.del('clientId'); go({ name: 'library' }); } }, 'クライアントIDを変更')))));
-  try { const e = await navigator.storage.estimate(); usage.textContent = (e.usage / 1048576).toFixed(1) + ' MB'; } catch { usage.textContent = '不明'; }
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => { logout(); S.clientId = ''; ls.del('clientId'); goTab('albums'); } }, 'クライアントIDを変更')))));
+  try { const e = await navigator.storage.estimate(); usage.textContent = fmtMB(e.usage || 0); } catch { usage.textContent = '不明'; }
+  // 一覧に載っていない保存データ（Driveから消えて、アルバムの一部だけ残った曲など）
+  const orphans = [...cached].filter(id => !IDX.has(id));
+  if (orphans.length) {
+    let b = 0; try { const c = await caches.open(C_AUDIO); for (const id of orphans) { const r = await c.match(keyFor(C_AUDIO, id)); if (r) b += (await r.blob()).size; } } catch {}
+    orphanLi.hidden = false;
+    orphanLi.append(h('span', { class: 'ico plain' }), h('div', { class: 'grow' }, h('b', {}, '一覧にない曲'), h('span', {}, `${orphans.length}曲・${fmtMB(b)}`)),
+      deleteLocalButton('削除', async () => { await removeTracksLocal(orphans); toast('一覧にない曲の保存データを削除しました'); render(); }));
+  }
 }
 
 async function refresh() {
   if (!tokenOk()) { needAuth(); toast('最新の状態にするにはGoogleに再接続してください'); return; }
   const b = $('#refreshBtn'); b.disabled = true; b.replaceChildren(h('span', { class: 'spin' }));
-  try { await scanLibrary(); toast(`${S.library.length}枚のアルバムを読み込みました`); }
+  let ok = false;
+  try { await scanLibrary(); ok = true; toast(`${S.library.length}枚のアルバムを読み込みました`); }
   catch (e) { if (!(e instanceof AuthNeeded)) toast('Driveの読み込みに失敗しました'); }
   b.disabled = false; b.replaceChildren(icon('i-refresh'));
-  render();
+  softRender();
+  if (ok) enrichTags();
 }
 
-/* ---------- player ---------- */
+/* ================= player ================= */
 const audio = new Audio();
 audio.preload = 'auto';
 let curURL = null, unlocked = false, loadSeq = 0;
-const SILENT = (() => { // 0.1秒の無音WAV。iOSでタップ直後に再生許可を得るため
+const SILENT = (() => {
   const n = 800, buf = new ArrayBuffer(44 + n), d = new DataView(buf), w = (o, s) => [...s].forEach((c, i) => d.setUint8(o + i, c.charCodeAt(0)));
   w(0, 'RIFF'); d.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); d.setUint32(16, 16, true); d.setUint16(20, 1, true); d.setUint16(22, 1, true);
   d.setUint32(24, 8000, true); d.setUint32(28, 8000, true); d.setUint16(32, 1, true); d.setUint16(34, 8, true); w(36, 'data'); d.setUint32(40, n, true);
@@ -592,9 +1176,7 @@ const SILENT = (() => { // 0.1秒の無音WAV。iOSでタップ直後に再生�
   let s = ''; new Uint8Array(buf).forEach(b => s += String.fromCharCode(b)); return 'data:audio/wav;base64,' + btoa(s);
 })();
 function unlock() { if (unlocked) return; unlocked = true; if (!curURL) { audio.src = SILENT; audio.play().catch(() => {}); } }
-
 const curTrack = () => S.queue[S.qi];
-const curAlbum = () => S.library.find(a => a.id === S.albumId);
 
 function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function applyShuffle(startId) {
@@ -602,10 +1184,11 @@ function applyShuffle(startId) {
   S.queue = S.shuffle ? [first, ...shuffled(S.base.filter(t => t !== first))] : S.base.slice();
   S.qi = S.queue.indexOf(first);
 }
-function playAlbum(a, i, shuffle) {
+function playList(tracks, i, shuffle, ctx) {
+  if (!tracks.length) return;
   if (shuffle) { S.shuffle = true; ls.set('shuffle', true); }
-  S.albumId = a.id; S.base = a.tracks.slice();
-  const start = shuffle ? a.tracks[Math.floor(Math.random() * a.tracks.length)] : a.tracks[i];
+  S.ctx = ctx; S.base = tracks.slice();
+  const start = shuffle ? tracks[Math.floor(Math.random() * tracks.length)] : tracks[i];
   applyShuffle(start.id);
   loadAndPlay(true, 0);
 }
@@ -624,6 +1207,7 @@ async function loadAndPlay(autoplay, seek) {
     if (autoplay) await audio.play();
     cached.add(t.id);
     updatePlayerUI(); setMediaSession(); saveResume(); prefetch();
+    if (!S.tags[t.id]) enrichTags();
   } catch (e) {
     if (seq !== loadSeq) return;
     updatePlayerUI();
@@ -633,13 +1217,15 @@ async function loadAndPlay(autoplay, seek) {
   }
 }
 let prefetching = false;
-async function prefetch() {   // アルバムの残りを順番に端末へ保存（ログインの有効期限切れ対策）
+async function prefetch() {
   if (prefetching || !tokenOk()) return;
   prefetching = true;
   try {
-    for (let k = 1; k <= Math.min(30, S.queue.length - 1); k++) {
-      const t = S.queue[(S.qi + k) % S.queue.length];
-      if (!cached.has(t.id)) await getBlob(C_AUDIO, t.id);
+    const ahead = S.autoSave ? Math.min(30, S.queue.length - 1) : Math.min(1, S.queue.length - 1);
+    for (let k = 1; k <= ahead; k++) {
+      const idx = S.qi + k; if (idx >= S.queue.length && S.repeat !== 'all') break;
+      const t = S.queue[idx % S.queue.length];
+      if (!cached.has(t.id)) { await getBlob(C_AUDIO, t.id); refreshRows(); }
     }
   } catch {}
   prefetching = false;
@@ -665,31 +1251,34 @@ function togglePlay() {
   if (audio.paused) audio.play().catch(() => toast('再生できませんでした')); else audio.pause();
 }
 
-/* resume */
-function resumeSnapshot() { const t = curTrack(); return t ? { albumId: S.albumId, trackId: t.id, time: audio.currentTime || S.pendingSeek || 0 } : ls.get('resume', null); }
+/* 続きから再生 */
+function resumeSnapshot() { const t = curTrack(); return t ? { ids: S.base.map(x => x.id), trackId: t.id, time: audio.currentTime || S.pendingSeek || 0, ctx: S.ctx } : ls.get('resume', null); }
 function saveResume() { const r = resumeSnapshot(); if (r) ls.set('resume', r); }
 function restoreResume() {
   const r = ls.get('resume', null); if (!r) return;
-  const a = S.library.find(x => x.id === r.albumId); if (!a) return;
-  S.albumId = a.id; S.base = a.tracks.slice();
+  let ids = r.ids, ctx = r.ctx;
+  if (!ids && r.albumId) { const a = S.library.find(x => x.id === r.albumId); if (!a) return; ids = a.tracks.map(t => t.id); ctx = { type: 'album', id: a.id, title: a.title }; }
+  const base = (ids || []).map(id => IDX.get(id)?.t).filter(Boolean);
+  if (!base.some(t => t.id === r.trackId)) return;
+  S.base = base; S.ctx = ctx || null;
   applyShuffle(r.trackId);
   S.pendingSeek = r.time || 0;
   updatePlayerUI();
 }
 
-/* UI sync */
+/* 表示の同期 */
 function setIcon(btn, id) { btn.querySelector('use').setAttribute('href', '#' + id); }
 function updatePlayerUI(loading) {
-  const t = curTrack(), a = curAlbum();
+  const t = curTrack(), a = albumOf(t);
   $('#mini').hidden = !t;
   if (!t) return;
-  const sub = [a?.artist, a?.title].filter(Boolean).join(' — ');
+  const sub = [t.artist || a?.artist, a?.title].filter(Boolean).join(' — ');
   $('#miniTitle').textContent = t.title; $('#miniSub').textContent = sub;
   $('#pTitle').textContent = t.title; $('#pSub').textContent = sub;
-  $('#sheetPos').textContent = `${S.qi + 1} / ${S.queue.length}`;
-  const key = (a?.cover || '') + '|' + (a?.id || '');
+  const ctx = S.ctx, where = !ctx ? '' : ctx.type === 'album' ? 'アルバム' : ctx.type === 'playlist' ? (plGet(ctx.id)?.name || ctx.title) : ctx.title;
+  $('#sheetPos').textContent = `${where ? where + '　' : ''}${S.qi + 1} / ${S.queue.length}`;
+  const key = (a ? artKey(a) || '' : '') + '|' + (a?.id || '');
   if ($('#miniCover').dataset.key !== key) {
-    $('#miniCover').dataset.key = key;
     $('#miniCover').replaceWith(Object.assign(coverEl(a), { id: 'miniCover' })); $('#miniCover').dataset.key = key;
     $('#pCover').replaceWith(Object.assign(coverEl(a), { id: 'pCover' }));
   }
@@ -699,20 +1288,13 @@ function updatePlayerUI(loading) {
     else { if (!b.querySelector('use')) b.replaceChildren(icon('i-play')); setIcon(b, playing ? 'i-pause' : 'i-play'); }
     b.setAttribute('aria-label', playing ? '一時停止' : '再生');
   }
+  const f = isFav(t.id);
+  $('#favBtn').classList.toggle('on', f); setIcon($('#favBtn'), f ? 'i-heart' : 'i-heart-o');
+  $('#favBtn').setAttribute('aria-label', f ? 'お気に入りから外す' : 'お気に入りに追加');
   $('#shufBtn').classList.toggle('on', S.shuffle);
   $('#repBtn').classList.toggle('on', S.repeat !== 'off');
   $('#repOne').hidden = S.repeat !== 'one';
-  if (S.view.name === 'album') {
-    document.querySelectorAll('.trk').forEach(el => {
-      const on = S.albumId === S.view.id && el.dataset.id === t.id;
-      el.classList.toggle('on', on);
-      const n = el.querySelector('.n');
-      if (on && !n.querySelector('.eq')) n.replaceChildren(h('span', { class: 'eq' }, h('i'), h('i'), h('i')));
-      if (!on && n.querySelector('.eq')) { const idx = [...document.querySelectorAll('.trk')].indexOf(el); const tr = S.library.find(x => x.id === S.view.id)?.tracks[idx]; n.textContent = tr?.no ?? idx + 1; }
-      const eq = n.querySelector('.eq'); if (eq) eq.classList.toggle('paused', !playing);
-      if (cached.has(el.dataset.id) && el.lastChild.className !== 'dot') el.lastChild.replaceWith(h('span', { class: 'dot', title: '端末に保存済み' }));
-    });
-  }
+  refreshRows();
   updateTime();
 }
 let dragging = false;
@@ -724,13 +1306,14 @@ function updateTime() {
   $('#miniBar').style.width = dur ? (c / dur * 100) + '%' : '0';
 }
 
-/* Media Session (lock screen / Control Center) */
+/* ロック画面・コントロールセンター */
 function setMediaSession() {
   if (!('mediaSession' in navigator)) return;
-  const t = curTrack(), a = curAlbum(); if (!t) return;
-  const art = a?.cover && coverURLs.get(a.cover);
+  const t = curTrack(), a = albumOf(t); if (!t) return;
+  const art = a && coverURLs.get(artKey(a));
+  if (a && !art && artKey(a)) artURL(a).then(u => { if (u && curTrack() === t) setMediaSession(); });
   try {
-    navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: a?.artist || '', album: a?.title || '', artwork: art ? [{ src: art, sizes: '512x512' }] : [{ src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }] });
+    navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist || a?.artist || '', album: a?.title || '', artwork: art ? [{ src: art, sizes: '512x512' }] : [{ src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }] });
   } catch {}
 }
 function setPositionState() {
@@ -745,7 +1328,6 @@ if ('mediaSession' in navigator) {
   set('seekto', e => { audio.currentTime = e.seekTime; setPositionState(); });
 }
 
-/* audio events */
 audio.addEventListener('ended', () => { if (curURL) next(true); });
 audio.addEventListener('play', () => { if (curURL) { updatePlayerUI(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; } });
 audio.addEventListener('pause', () => { if (curURL) { updatePlayerUI(); saveResume(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; } });
@@ -757,7 +1339,7 @@ audio.addEventListener('timeupdate', () => {
   if (Date.now() - lastSave > 5000) { lastSave = Date.now(); saveResume(); setPositionState(); }
 });
 
-/* controls */
+/* 操作 */
 $('#miniPlay').onclick = togglePlay;
 $('#playBtn').onclick = togglePlay;
 $('#miniNext').onclick = () => { unlock(); next(false); };
@@ -765,24 +1347,36 @@ $('#nextBtn').onclick = () => { unlock(); next(false); };
 $('#prevBtn').onclick = () => { unlock(); prev(); };
 $('#miniOpen').onclick = () => { $('#sheet').hidden = false; updatePlayerUI(); };
 $('#sheetClose').onclick = () => { $('#sheet').hidden = true; };
+$('#favBtn').onclick = () => { const t = curTrack(); if (t) toggleFav(t.id); };
 $('#shufBtn').onclick = () => { S.shuffle = !S.shuffle; ls.set('shuffle', S.shuffle); const t = curTrack(); if (t) applyShuffle(t.id); updatePlayerUI(); };
-$('#repBtn').onclick = () => { S.repeat = { off: 'all', all: 'one', one: 'off' }[S.repeat]; ls.set('repeat', S.repeat); updatePlayerUI(); toast({ off: 'リピートしない', all: 'アルバムをリピート', one: '1曲をリピート' }[S.repeat]); };
+$('#repBtn').onclick = () => { S.repeat = { off: 'all', all: 'one', one: 'off' }[S.repeat]; ls.set('repeat', S.repeat); updatePlayerUI(); toast({ off: 'リピートしない', all: 'すべてリピート', one: '1曲をリピート' }[S.repeat]); };
 const seek = $('#seek');
 seek.addEventListener('input', () => { dragging = true; const d = audio.duration; if (isFinite(d)) $('#tCur').textContent = fmt(seek.value / 1000 * d); });
 seek.addEventListener('change', () => { const d = audio.duration; if (isFinite(d) && curURL) audio.currentTime = seek.value / 1000 * d; dragging = false; setPositionState(); });
-$('#backBtn').onclick = () => go({ name: 'library' });
-$('#settingsBtn').onclick = () => go({ name: 'settings' });
+$('#backBtn').onclick = () => go({ name: S.view.parent || S.tab });
+$('#settingsBtn').onclick = () => go({ name: 'settings', parent: S.tab });
 $('#refreshBtn').onclick = refresh;
 $('#reauthBtn').onclick = () => { if (!audio.paused) { toast('再生を止めてから再接続してください'); return; } login(true); };
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  if (S.tab === b.dataset.tab && S.view.name === b.dataset.tab) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  goTab(b.dataset.tab);
+});
 
-/* ---------- boot ---------- */
+/* ================= boot ================= */
 (async function boot() {
   readAuthRedirect();
   await loadCachedIndex();
-  if (S.view.name === 'settings') S.view = { name: 'library' };
+  for (const a of S.library) {
+    if (a.folderTitle == null) { a.folderTitle = a.title; a.folderArtist = a.artist; }
+    for (const t of a.tracks) if (t.fileTitle == null) { t.fileTitle = t.title; t.fileNo = t.no; }
+  }
+  fav();
+  applyTags();
+  if (S.view.name === 'settings' || S.view.name === 'library') S.view = { name: S.tab };
   restoreResume();
   render();
   if (S.clientId && S.root && tokenOk() && (!S.library.length || Date.now() - S.scannedAt > 6 * 3600 * 1000)) refresh();
+  else if (S.library.length) enrichTags();
   if (S.clientId && S.root && !tokenOk() && !S.library.length) needAuth();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
