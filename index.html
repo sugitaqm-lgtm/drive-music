@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Driveレコード棚</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="レコード棚">
+<meta name="theme-color" content="#F2F1EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121316" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: shelf of album "sleeves" in a 2-col grid, album page with a track sheet, fixed mini player docked at the bottom. */
+:root{
+  --bg:#F2F1EC; --surface:#FFFFFF; --ink:#17181C; --muted:#61656E; --line:#DDDCD4;
+  --accent:#2C46C4; --accent-ink:#FFFFFF; --accent-soft:#E3E7F8; --warn:#9A3412; --warn-bg:#FBEBDD;
+  --display:"Zen Kaku Gothic New",-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
+  --body:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --mini-h:68px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#121316; --surface:#1B1C21; --ink:#ECEDF0; --muted:#9CA0AA; --line:#2B2D34;
+  --accent:#93A4FF; --accent-ink:#0F1433; --accent-soft:#232A4D; --warn:#FDBA8C; --warn-bg:#3A2418;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+img{max-width:100%;display:block}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 calc(var(--mini-h) + 32px + env(safe-area-inset-bottom,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:8px;padding-block:12px 10px;border-bottom:1px solid var(--line);margin-bottom:16px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top h1{flex:1;min-width:0;margin:0;font-family:var(--display);font-weight:900;font-size:20px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;flex:none}
+.iconbtn:active{background:var(--line)}
+.iconbtn svg{width:22px;height:22px;fill:currentColor}
+
+/* generic */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 18px;border-radius:21px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.btn:disabled{opacity:.5}
+.field{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 12px;font:inherit;font-size:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.h2{font-family:var(--display);font-weight:900;font-size:22px;margin:0;text-wrap:balance}
+.label{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.code{font-family:var(--mono);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;word-break:break-all;user-select:all}
+ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;line-height:1.6}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-weight:700;font-size:14px}
+.banner .btn{height:34px;padding:0 14px}
+
+/* shelf */
+.shelf-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px 14px}
+.sleeve{text-align:left;display:flex;flex-direction:column;gap:8px;min-width:0}
+.cover{position:relative;aspect-ratio:1;width:100%;max-width:100%;border-radius:6px;overflow:hidden;background:var(--line);box-shadow:0 1px 0 rgba(0,0,0,.06),0 6px 16px -10px rgba(0,0,0,.45)}
+.cover img{width:100%;height:100%;object-fit:cover}
+.cover .ph{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:900;font-size:44px;color:#fff;letter-spacing:-.02em}
+.cover .ph::after{content:"";position:absolute;width:38%;aspect-ratio:1;border-radius:50%;border:2px solid rgba(255,255,255,.35);right:-8%;bottom:-8%}
+.sleeve .t{font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sleeve .a{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
+.empty{padding:40px 8px;text-align:center;color:var(--muted);line-height:1.7}
+
+/* album */
+.album-hero{display:grid;grid-template-columns:min(42%,220px) 1fr;gap:18px;align-items:end;margin-bottom:18px}
+.album-hero .meta{display:flex;flex-direction:column;gap:6px;min-width:0}
+@media (max-width:420px){.album-hero{grid-template-columns:1fr}.album-hero .cover{max-width:260px}}
+.tracks{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.trk{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 4px;border-bottom:1px solid var(--line)}
+.trk .n{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.trk .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trk .disc{font-size:12px;color:var(--muted)}
+.trk.on .nm{color:var(--accent);font-weight:700}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:.8}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.eq i{width:3px;background:var(--accent);animation:eq 1s infinite ease-in-out}
+.eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}
+.eq.paused i{animation-play-state:paused}
+@keyframes eq{0%,100%{height:4px}50%{height:14px}}
+@media (prefers-reduced-motion:reduce){.eq i{animation:none;height:10px}}
+
+/* folder picker */
+.list{list-style:none;margin:0;padding:0}
+.list button{width:100%;text-align:left;padding:13px 4px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.list svg{width:20px;height:20px;fill:var(--muted);flex:none}
+
+/* mini player */
+.mini{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+.mini .bar{position:absolute;left:0;top:-1px;height:2px;background:var(--accent);width:0}
+.mini .in{max-width:760px;margin:0 auto;height:var(--mini-h);display:flex;align-items:center;gap:10px}
+.mini .open{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left}
+.mini .cover{width:46px;flex:none;border-radius:4px}
+.mini .cover .ph{font-size:18px}
+.mini .txt{min-width:0}
+.mini .txt b,.mini .txt span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .txt span{font-size:12px;color:var(--muted)}
+
+/* full player */
+.sheet{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));overflow-y:auto}
+.sheet .grab{display:flex;justify-content:space-between;align-items:center;padding-block:8px}
+.player{flex:1;max-width:440px;width:100%;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:20px}
+.player .cover{border-radius:8px;box-shadow:0 20px 40px -24px rgba(0,0,0,.6)}
+.player .ttl{font-family:var(--display);font-weight:900;font-size:21px;line-height:1.35;text-wrap:balance}
+.seek{width:100%;accent-color:var(--accent);height:24px}
+.times{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ctrl{display:flex;align-items:center;justify-content:space-between}
+.ctrl .iconbtn svg{width:24px;height:24px}
+.ctrl .big{width:68px;height:68px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.ctrl .big svg{width:30px;height:30px;fill:currentColor}
+.ctrl .mid svg{width:30px;height:30px}
+.toggle{position:relative;color:var(--muted)}
+.toggle.on{color:var(--accent)}
+.toggle .one{position:absolute;right:4px;bottom:4px;font-family:var(--mono);font-size:10px;font-weight:700}
+
+/* settings */
+.settings dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px}
+.settings dt{color:var(--muted)}
+.settings dd{margin:0;min-width:0;word-break:break-all}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--mini-h) + 18px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 8px 24px -12px rgba(0,0,0,.5)}
+.spin{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 6.2v11.6a.9.9 0 0 0 1.4.75L15 12.75V17.5h2.5v-11H15v4.75L6.4 5.45A.9.9 0 0 0 5 6.2z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M19 6.2v11.6a.9.9 0 0 1-1.4.75L9 12.75V17.5H6.5v-11H9v4.75l8.6-5.8A.9.9 0 0 1 19 6.2z"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M16 4l4 3.5L16 11V8.5h-1.6c-1.2 0-1.9.5-2.7 1.6l-.9 1.3-1.2-1.7.4-.6c1.1-1.6 2.3-2.6 4.4-2.6H16zM4 7h2.6c2.1 0 3.3 1 4.4 2.6l3.3 4.8c.8 1.1 1.5 1.6 2.7 1.6H16v-2.5l4 3.5-4 3.5v-2.5h-.9c-2.1 0-3.3-1-4.4-2.6l-3.3-4.8C6.6 9.5 5.9 9 4.7 9H4zm0 8h.7c1.2 0 1.9-.5 2.7-1.6l.9-1.3 1.2 1.7-.4.6C8 16 6.8 17 4.7 17H4z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M7 7h10V4.5l3.5 3.5L17 11.5V9H7.5A1.5 1.5 0 0 0 6 10.5V13H4v-2.5A3.5 3.5 0 0 1 7 7zm10 10H7v2.5L3.5 16 7 12.5V15h9.5a1.5 1.5 0 0 0 1.5-1.5V11h2v2.5A3.5 3.5 0 0 1 17 17z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15.4 4.6 8 12l7.4 7.4 1.4-1.4-6-6 6-6z"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M4.6 8.6 12 16l7.4-7.4-1.4-1.4-6 6-6-6z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.4 4.6.1-1.1-.1-1.1 2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.9-1.1L15.7 3h-4l-.4 2.7c-.7.3-1.3.6-1.9 1.1L7 5.8l-2 3.5L7.1 11 7 12l.1 1.1-2.1 1.6 2 3.5 2.5-1c.6.5 1.2.8 1.9 1.1l.4 2.7h4l.4-2.7c.7-.3 1.3-.6 1.9-1.1l2.5 1 2-3.5z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M17.6 6.4A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.8-4.2L13 11h7V4z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2h8A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M11 4h2v8.2l3.1-3.1 1.4 1.4L12 16l-5.5-5.5 1.4-1.4 3.1 3.1zM5 18h14v2H5z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 16.2-4.2-4.2-1.4 1.4 5.6 5.6 11-11-1.4-1.4z"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <button class="iconbtn" id="backBtn" hidden aria-label="戻る"><svg><use href="#i-back"/></svg></button>
+    <h1 id="title">レコード棚</h1>
+    <button class="iconbtn" id="refreshBtn" hidden aria-label="Driveから再読み込み"><svg><use href="#i-refresh"/></svg></button>
+    <button class="iconbtn" id="settingsBtn" aria-label="設定"><svg><use href="#i-gear"/></svg></button>
+  </header>
+  <div id="authBanner" class="banner" hidden>
+    <span>Googleとの接続が切れています</span>
+    <button class="btn" id="reauthBtn">再接続</button>
+  </div>
+  <main id="view"></main>
+</div>
+
+<!-- mini player -->
+<div class="mini" id="mini" hidden>
+  <div class="bar" id="miniBar"></div>
+  <div class="in">
+    <button class="open" id="miniOpen" aria-label="プレーヤーを開く">
+      <div class="cover" id="miniCover"></div>
+      <div class="txt"><b id="miniTitle"></b><span id="miniSub"></span></div>
+    </button>
+    <button class="iconbtn" id="miniPlay" aria-label="再生"><svg><use href="#i-play"/></svg></button>
+    <button class="iconbtn" id="miniNext" aria-label="次の曲"><svg><use href="#i-next"/></svg></button>
+  </div>
+</div>
+
+<!-- full player -->
+<section class="sheet" id="sheet" hidden aria-label="再生中">
+  <div class="grab">
+    <button class="iconbtn" id="sheetClose" aria-label="閉じる"><svg><use href="#i-down"/></svg></button>
+    <span class="label" id="sheetPos"></span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="player">
+    <div class="cover" id="pCover"></div>
+    <div>
+      <div class="ttl" id="pTitle"></div>
+      <div class="muted" id="pSub"></div>
+    </div>
+    <div>
+      <input type="range" class="seek" id="seek" min="0" max="1000" value="0" aria-label="再生位置">
+      <div class="times"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
+    </div>
+    <div class="ctrl">
+      <button class="iconbtn toggle" id="shufBtn" aria-label="シャッフル"><svg><use href="#i-shuffle"/></svg></button>
+      <button class="iconbtn mid" id="prevBtn" aria-label="前の曲"><svg><use href="#i-prev"/></svg></button>
+      <button class="big" id="playBtn" aria-label="再生"><svg><use href="#i-play"/></svg></button>
+      <button class="iconbtn mid" id="nextBtn" aria-label="次の曲"><svg><use href="#i-next"/></svg></button>
+      <button class="iconbtn toggle" id="repBtn" aria-label="リピート"><svg><use href="#i-repeat"/></svg><span class="one" id="repOne" hidden>1</span></button>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+"use strict";
+/* ---------- basics ---------- */
+const $ = s => document.querySelector(s);
+const h = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : String(kid));
+  return el;
+};
+const icon = id => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); const u = document.createElementNS('http://www.w3.org/2000/svg', 'use'); u.setAttribute('href', '#' + id); s.append(u); return s; };
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem('dm.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('dm.' + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem('dm.' + k); } catch {} }
+};
+let toastTimer;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 3200); }
+const fmt = s => { if (!isFinite(s) || s < 0) s = 0; s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+
+const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const REDIRECT = location.origin + location.pathname.replace(/index\.html$/, '');
+const FOLDER = 'application/vnd.google-apps.folder';
+const AUDIO_EXT = /\.(mp3|m4a|m4b|aac|mp4|wav|aif|aiff|flac|alac|caf|ogg|oga|opus)$/i;
+const IMG_EXT = /\.(jpe?g|png|webp|gif)$/i;
+const C_AUDIO = 'dm-audio-v1', C_IMG = 'dm-img-v1';
+
+/* ---------- state ---------- */
+const S = {
+  clientId: ls.get('clientId', ''),
+  token: ls.get('token', null),        // {value, exp}
+  root: ls.get('root', null),          // {id, name}
+  library: ls.get('library', []),      // albums
+  scannedAt: ls.get('scannedAt', 0),
+  shuffle: ls.get('shuffle', false),
+  repeat: ls.get('repeat', 'off'),     // off | all | one
+  base: [], queue: [], qi: -1, albumId: null,
+  view: { name: 'library' },
+  pendingSeek: 0
+};
+const cached = new Set();
+const tokenOk = () => !!(S.token && Date.now() < S.token.exp - 60000);
+class AuthNeeded extends Error {}
+
+/* ---------- auth (OAuth implicit flow via redirect: works in iOS home-screen apps) ---------- */
+function login(silent) {
+  const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  ls.set('oauth', { nonce, silent: !!silent, view: S.view, resume: resumeSnapshot() });
+  const p = new URLSearchParams({
+    client_id: S.clientId, redirect_uri: REDIRECT, response_type: 'token',
+    scope: SCOPE, include_granted_scopes: 'true', state: nonce
+  });
+  if (silent) p.set('prompt', 'none');
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + p;
+}
+function readAuthRedirect() {
+  if (!/access_token=|error=/.test(location.hash)) return;
+  const p = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, '', REDIRECT);
+  const pending = ls.get('oauth', null);
+  ls.del('oauth');
+  if (!pending || p.get('state') !== pending.nonce) return;
+  if (pending.view) S.view = pending.view;
+  if (pending.resume) ls.set('resume', pending.resume);
+  if (p.get('access_token')) {
+    S.token = { value: p.get('access_token'), exp: Date.now() + (+p.get('expires_in') || 3600) * 1000 };
+    ls.set('token', S.token);
+  } else if (pending.silent) {
+    login(false);             // silent attempt failed: show the normal Google screen
+  } else {
+    toast('ログインできませんでした（' + p.get('error') + '）');
+  }
+}
+function logout() {
+  if (S.token) fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(S.token.value), { method: 'POST' }).catch(() => {});
+  S.token = null; ls.del('token');
+}
+
+/* ---------- Drive API ---------- */
+async function drive(path, params = {}, blob = false) {
+  if (!tokenOk()) { needAuth(); throw new AuthNeeded(); }
+  const url = new URL('https://www.googleapis.com/drive/v3/' + path);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + S.token.value } });
+  if (r.status === 401) { S.token = null; ls.del('token'); needAuth(); throw new AuthNeeded(); }
+  if (!r.ok) throw new Error('Drive API ' + r.status);
+  return blob ? r.blob() : r.json();
+}
+async function listChildren(id) {
+  const out = []; let pageToken = '';
+  do {
+    const q = { q: `'${id}' in parents and trashed=false`, fields: 'nextPageToken,files(id,name,mimeType,size)', pageSize: 1000, supportsAllDrives: true, includeItemsFromAllDrives: true };
+    if (pageToken) q.pageToken = pageToken;
+    const j = await drive('files', q);
+    out.push(...(j.files || [])); pageToken = j.nextPageToken || '';
+  } while (pageToken);
+  return out;
+}
+const isFolder = f => f.mimeType === FOLDER;
+const isAudio = f => (f.mimeType || '').startsWith('audio/') || AUDIO_EXT.test(f.name);
+const isImage = f => (f.mimeType || '').startsWith('image/') && IMG_EXT.test(f.name);
+const byName = (a, b) => collator.compare(a.name, b.name);
+const qEsc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+function trackFrom(f, disc) {
+  const base = f.name.replace(/\.[^.]+$/, '');
+  const m = base.match(/^(\d{1,3})[\s._\-)]+(.+)$/);
+  return { id: f.id, title: m ? m[2].trim() : base, no: m ? +m[1] : null, disc: disc || '', size: +f.size || 0 };
+}
+function splitName(name) {
+  const i = name.indexOf(' - ');
+  return i > 0 ? { artist: name.slice(0, i).trim(), title: name.slice(i + 3).trim() } : { artist: '', title: name };
+}
+function pickCover(files) {
+  const imgs = files.filter(isImage).sort(byName);
+  return (imgs.find(f => /^(cover|folder|front|jacket|album)/i.test(f.name)) || imgs[0] || {}).id || null;
+}
+async function pmap(items, n, fn) {
+  const res = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; res[k] = await fn(items[k]); } }));
+  return res;
+}
+async function scanLibrary() {
+  const kids = await listChildren(S.root.id);
+  const albums = await pmap(kids.filter(isFolder).sort(byName), 4, async f => {
+    const c = await listChildren(f.id);
+    let tracks = c.filter(isAudio).sort(byName).map(x => trackFrom(x));
+    let cover = pickCover(c);
+    for (const d of c.filter(isFolder).sort(byName)) {          // Disc 1 / Disc 2 などの一段下のフォルダ
+      const dc = await listChildren(d.id);
+      tracks = tracks.concat(dc.filter(isAudio).sort(byName).map(x => trackFrom(x, d.name)));
+      cover = cover || pickCover(dc);
+    }
+    return { id: f.id, name: f.name, ...splitName(f.name), cover, tracks };
+  });
+  const loose = kids.filter(isAudio).sort(byName);
+  if (loose.length) albums.push({ id: S.root.id, name: S.root.name, artist: '', title: S.root.name + '（フォルダ直下の曲）', cover: pickCover(kids), tracks: loose.map(x => trackFrom(x)) });
+  S.library = albums.filter(a => a.tracks.length);
+  S.scannedAt = Date.now();
+  ls.set('library', S.library); ls.set('scannedAt', S.scannedAt);
+}
+
+/* ---------- local file cache (Cache Storage) ---------- */
+const keyFor = (c, id) => new Request(location.origin + '/__dm/' + c + '/' + id);
+const inflight = new Map();
+async function getBlob(c, id) {
+  try { const hit = await (await caches.open(c)).match(keyFor(c, id)); if (hit) return await hit.blob(); } catch {}
+  const k = c + id;
+  if (inflight.has(k)) return inflight.get(k);
+  const p = (async () => {
+    const b = await drive('files/' + id, { alt: 'media', supportsAllDrives: true }, true);
+    try { await (await caches.open(c)).put(keyFor(c, id), new Response(b, { headers: { 'Content-Type': b.type || 'application/octet-stream' } })); if (c === C_AUDIO) cached.add(id); } catch {}
+    return b;
+  })();
+  inflight.set(k, p);
+  try { return await p; } finally { inflight.delete(k); }
+}
+async function loadCachedIndex() {
+  try { const keys = await (await caches.open(C_AUDIO)).keys(); keys.forEach(r => cached.add(r.url.split('/').pop())); } catch {}
+}
+async function clearCaches() {
+  try { await caches.delete(C_AUDIO); await caches.delete(C_IMG); } catch {}
+  cached.clear(); coverURLs.clear();
+}
+
+/* ---------- covers ---------- */
+const coverURLs = new Map();
+function hue(s) { let x = 0; for (const ch of s) x = (x * 31 + ch.codePointAt(0)) >>> 0; return x % 360; }
+function coverEl(album, cls = '') {
+  const box = h('div', { class: 'cover ' + cls });
+  const name = album ? (album.title || album.name) : '♪';
+  const ph = h('div', { class: 'ph' }, [...name][0] || '♪');
+  ph.style.background = `linear-gradient(135deg, hsl(${hue(name)} 42% 42%), hsl(${(hue(name) + 40) % 360} 38% 30%))`;
+  box.append(ph);
+  if (album && album.cover) {
+    const show = url => { box.replaceChildren(h('img', { src: url, alt: '', loading: 'lazy' })); };
+    if (coverURLs.has(album.cover)) show(coverURLs.get(album.cover));
+    else getBlob(C_IMG, album.cover).then(b => { const u = URL.createObjectURL(b); coverURLs.set(album.cover, u); show(u); }).catch(() => {});
+  }
+  return box;
+}
+
+/* ---------- views ---------- */
+function setTop(title, { back = false, refresh = false } = {}) {
+  $('#title').textContent = title; $('#backBtn').hidden = !back; $('#refreshBtn').hidden = !refresh;
+}
+function go(view) { S.view = view; render(); window.scrollTo(0, 0); }
+function needAuth() { $('#authBanner').hidden = !S.clientId; }
+
+function render() {
+  const v = $('#view'); v.replaceChildren();
+  if (!S.clientId) return renderSetup(v);
+  if (S.view.name === 'settings') return renderSettings(v);
+  if (!S.root) { if (!tokenOk()) return renderLogin(v); return renderPicker(v); }
+  if (S.view.name === 'picker') return renderPicker(v);
+  if (S.view.name === 'album') { const a = S.library.find(x => x.id === S.view.id); if (a) return renderAlbum(v, a); }
+  renderLibrary(v);
+}
+
+function renderSetup(v) {
+  setTop('はじめの設定');
+  const input = h('input', { class: 'field', id: 'cid', placeholder: 'xxxxxxxx.apps.googleusercontent.com', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+  const copy = h('button', { class: 'btn ghost', onclick: async () => { try { await navigator.clipboard.writeText(REDIRECT); toast('コピーしました'); } catch { toast('長押しでコピーしてください'); } } }, 'コピー');
+  v.append(h('div', { class: 'stack' },
+    h('p', { class: 'muted', style: 'margin:0;line-height:1.7' }, 'Google Driveの音楽を読み込むために、Google CloudでOAuthクライアントIDを1回だけ発行します。詳しい手順は同梱のREADMEにあります。'),
+    h('div', { class: 'card stack' },
+      h('div', { class: 'label' }, 'Google Cloudに登録するURL'),
+      h('div', { class: 'small muted' }, '「承認済みのJavaScript生成元」には先頭のドメイン部分、「承認済みのリダイレクトURI」にはこのURLをそのまま登録します。'),
+      h('div', { class: 'code', id: 'redir' }, REDIRECT),
+      h('div', { class: 'row' }, copy)),
+    h('div', { class: 'card stack' },
+      h('label', { class: 'label', for: 'cid' }, 'OAuthクライアントID'),
+      input,
+      h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => {
+        const val = input.value.trim();
+        if (!/\.apps\.googleusercontent\.com$/.test(val)) { toast('クライアントIDは「.apps.googleusercontent.com」で終わる文字列です'); return; }
+        S.clientId = val; ls.set('clientId', val); render();
+      } }, '保存して次へ')))
+  ));
+}
+
+function renderLogin(v) {
+  setTop('レコード棚');
+  v.append(h('div', { class: 'card stack', style: 'text-align:center;padding:32px 18px' },
+    h('p', { class: 'h2' }, 'Driveの音楽を聴く'),
+    h('p', { class: 'muted', style: 'margin:0;line-height:1.7' }, 'Googleアカウントでログインすると、Driveのフォルダを読み取り専用で参照します。ファイルを書き換えることはありません。'),
+    h('div', {}, h('button', { class: 'btn', onclick: () => login(false) }, 'Googleでログイン'))));
+}
+
+function renderPicker(v) {
+  setTop('音楽フォルダを選ぶ', { back: !!S.root });
+  const list = h('ul', { class: 'list' });
+  const q = h('input', { class: 'field', id: 'fq', placeholder: 'フォルダ名で検索、またはフォルダのURLを貼り付け', autocomplete: 'off' });
+  const choose = async f => {
+    S.root = { id: f.id, name: f.name }; ls.set('root', S.root);
+    S.library = []; ls.set('library', []);
+    go({ name: 'library' }); refresh();
+  };
+  let timer;
+  const load = async () => {
+    list.replaceChildren(h('li', { class: 'muted small', style: 'padding:12px 4px' }, h('span', { class: 'spin' })));
+    const text = q.value.trim();
+    try {
+      const m = text.match(/folders\/([\w-]{10,})/) || text.match(/^([\w-]{25,})$/);
+      let files;
+      if (m) { files = [await drive('files/' + m[1], { fields: 'id,name,mimeType', supportsAllDrives: true })].filter(isFolder); }
+      else {
+        const query = text ? `mimeType='${FOLDER}' and trashed=false and name contains '${qEsc(text)}'` : `mimeType='${FOLDER}' and trashed=false and 'root' in parents`;
+        files = (await drive('files', { q: query, fields: 'files(id,name)', pageSize: 100, orderBy: 'name', supportsAllDrives: true, includeItemsFromAllDrives: true })).files || [];
+      }
+      list.replaceChildren(...(files.length ? files.map(f => h('li', {}, h('button', { onclick: () => choose(f) }, icon('i-folder'), f.name))) : [h('li', { class: 'muted small', style: 'padding:12px 4px' }, '見つかりませんでした')]));
+    } catch (e) { if (!(e instanceof AuthNeeded)) list.replaceChildren(h('li', { class: 'muted small', style: 'padding:12px 4px' }, '読み込みに失敗しました。通信状態を確認してください。')); }
+  };
+  q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 350); });
+  v.append(h('div', { class: 'stack' },
+    h('p', { class: 'muted', style: 'margin:0;line-height:1.7' }, 'アルバムのフォルダがまとめて入っている親フォルダを選んでください。中のフォルダ1つが1アルバムになります。'),
+    q, list));
+  load();
+}
+
+function albumSaved(a) { return a.tracks.every(t => cached.has(t.id)); }
+
+function renderLibrary(v) {
+  setTop('レコード棚', { refresh: true });
+  const head = h('div', { class: 'shelf-head' },
+    h('div', {}, h('div', { class: 'label' }, S.root?.name || ''),
+      h('div', { class: 'small muted' }, S.library.length ? `${S.library.length}枚・${S.library.reduce((n, a) => n + a.tracks.length, 0)}曲` : '')));
+  v.append(head);
+  if (!S.library.length) {
+    v.append(h('div', { class: 'empty' }, S.scannedAt
+      ? ['まだ曲が見つかりません。', h('br'), '「', S.root.name, '」の中にアルバムごとのフォルダを作り、曲を入れてから右上の更新ボタンを押してください。']
+      : [h('span', { class: 'spin' }), h('br'), 'Driveを読み込んでいます…']));
+    return;
+  }
+  v.append(h('div', { class: 'grid' }, S.library.map(a => h('button', { class: 'sleeve', onclick: () => go({ name: 'album', id: a.id }) },
+    coverEl(a),
+    h('div', { class: 't' }, a.title),
+    h('div', { class: 'a' }, a.artist || `${a.tracks.length}曲`),
+    albumSaved(a) ? h('div', {}, h('span', { class: 'chip' }, '端末に保存済み')) : null))));
+}
+
+let saving = null;
+function renderAlbum(v, a) {
+  setTop(a.title, { back: true });
+  const playing = S.albumId === a.id;
+  const saveBtn = h('button', { class: 'btn ghost', id: 'saveBtn', onclick: () => saveAlbum(a) }, icon(albumSaved(a) ? 'i-check' : 'i-save'), albumSaved(a) ? '保存済み' : '端末に保存');
+  if (saving === a.id) saveBtn.disabled = true;
+  v.append(h('div', { class: 'album-hero' }, coverEl(a),
+    h('div', { class: 'meta' },
+      a.artist ? h('div', { class: 'label' }, a.artist) : null,
+      h('h2', { class: 'h2' }, a.title),
+      h('div', { class: 'small muted' }, `${a.tracks.length}曲`),
+      h('div', { class: 'row', style: 'margin-top:6px' },
+        h('button', { class: 'btn', onclick: () => { unlock(); playAlbum(a, 0, false); } }, icon('i-play'), '再生'),
+        h('button', { class: 'btn ghost', onclick: () => { unlock(); playAlbum(a, 0, true); } }, icon('i-shuffle'), 'シャッフル'),
+        saveBtn))));
+  let lastDisc = null;
+  const items = [];
+  a.tracks.forEach((t, i) => {
+    if (t.disc && t.disc !== lastDisc) { items.push(h('li', { class: 'label', style: 'padding:14px 4px 6px' }, t.disc)); lastDisc = t.disc; }
+    const on = playing && S.queue[S.qi]?.id === t.id;
+    items.push(h('li', {}, h('button', { class: 'trk' + (on ? ' on' : ''), 'data-id': t.id, onclick: () => { unlock(); playAlbum(a, i, false); } },
+      h('span', { class: 'n' }, on ? h('span', { class: 'eq' + (audio.paused ? ' paused' : '') }, h('i'), h('i'), h('i')) : (t.no ?? i + 1)),
+      h('span', { class: 'nm' }, t.title),
+      cached.has(t.id) ? h('span', { class: 'dot', title: '端末に保存済み' }) : h('span'))));
+  });
+  v.append(h('ul', { class: 'tracks' }, items));
+}
+
+async function saveAlbum(a) {
+  if (saving) return;
+  saving = a.id;
+  const todo = a.tracks.filter(t => !cached.has(t.id));
+  try { await navigator.storage?.persist?.(); } catch {}
+  let n = 0;
+  const label = () => { const b = $('#saveBtn'); if (b) { b.disabled = true; b.replaceChildren(h('span', { class: 'spin' }), `保存中 ${n}/${todo.length}`); } };
+  label();
+  try {
+    if (a.cover) await getBlob(C_IMG, a.cover).catch(() => {});
+    for (const t of todo) { await getBlob(C_AUDIO, t.id); n++; label(); }
+    toast('「' + a.title + '」を端末に保存しました');
+  } catch (e) { if (!(e instanceof AuthNeeded)) toast('保存の途中で失敗しました。もう一度お試しください'); }
+  saving = null;
+  if (S.view.name === 'album') render();
+}
+
+async function renderSettings(v) {
+  setTop('設定', { back: true });
+  const usage = h('dd', {}, '計算中…');
+  v.append(h('div', { class: 'stack settings' },
+    h('div', { class: 'card stack' },
+      h('div', { class: 'label' }, 'DRIVE'),
+      h('dl', {},
+        h('dt', {}, '音楽フォルダ'), h('dd', {}, S.root?.name || '未設定'),
+        h('dt', {}, '最終更新'), h('dd', {}, S.scannedAt ? new Date(S.scannedAt).toLocaleString('ja-JP') : '—'),
+        h('dt', {}, 'ログイン'), h('dd', {}, tokenOk() ? '接続中' : '未接続')),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn ghost', onclick: () => go({ name: 'picker' }) }, 'フォルダを変更'),
+        tokenOk() ? h('button', { class: 'btn ghost', onclick: () => { logout(); toast('ログアウトしました'); render(); } }, 'ログアウト')
+                  : h('button', { class: 'btn ghost', onclick: () => login(false) }, 'ログイン'))),
+    h('div', { class: 'card stack' },
+      h('div', { class: 'label' }, 'この端末'),
+      h('dl', {}, h('dt', {}, '保存済みの曲'), h('dd', {}, cached.size + '曲'), h('dt', {}, '使用容量'), usage),
+      h('p', { class: 'small muted', style: 'margin:0;line-height:1.6' }, '一度再生した曲とアルバムの残り曲は自動で端末に保存され、次からは通信なしで再生できます。'),
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: async () => { await clearCaches(); toast('端末の保存データを削除しました'); render(); } }, '保存データを削除'))),
+    h('div', { class: 'card stack' },
+      h('div', { class: 'label' }, 'GOOGLE CLOUD'),
+      h('dl', {}, h('dt', {}, 'クライアントID'), h('dd', { class: 'small' }, S.clientId)),
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => { logout(); S.clientId = ''; ls.del('clientId'); go({ name: 'library' }); } }, 'クライアントIDを変更')))));
+  try { const e = await navigator.storage.estimate(); usage.textContent = (e.usage / 1048576).toFixed(1) + ' MB'; } catch { usage.textContent = '不明'; }
+}
+
+async function refresh() {
+  if (!tokenOk()) { needAuth(); toast('最新の状態にするにはGoogleに再接続してください'); return; }
+  const b = $('#refreshBtn'); b.disabled = true; b.replaceChildren(h('span', { class: 'spin' }));
+  try { await scanLibrary(); toast(`${S.library.length}枚のアルバムを読み込みました`); }
+  catch (e) { if (!(e instanceof AuthNeeded)) toast('Driveの読み込みに失敗しました'); }
+  b.disabled = false; b.replaceChildren(icon('i-refresh'));
+  render();
+}
+
+/* ---------- player ---------- */
+const audio = new Audio();
+audio.preload = 'auto';
+let curURL = null, unlocked = false, loadSeq = 0;
+const SILENT = (() => { // 0.1秒の無音WAV。iOSでタップ直後に再生許可を得るため
+  const n = 800, buf = new ArrayBuffer(44 + n), d = new DataView(buf), w = (o, s) => [...s].forEach((c, i) => d.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); d.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); d.setUint32(16, 16, true); d.setUint16(20, 1, true); d.setUint16(22, 1, true);
+  d.setUint32(24, 8000, true); d.setUint32(28, 8000, true); d.setUint16(32, 1, true); d.setUint16(34, 8, true); w(36, 'data'); d.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) d.setUint8(44 + i, 128);
+  let s = ''; new Uint8Array(buf).forEach(b => s += String.fromCharCode(b)); return 'data:audio/wav;base64,' + btoa(s);
+})();
+function unlock() { if (unlocked) return; unlocked = true; if (!curURL) { audio.src = SILENT; audio.play().catch(() => {}); } }
+
+const curTrack = () => S.queue[S.qi];
+const curAlbum = () => S.library.find(a => a.id === S.albumId);
+
+function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function applyShuffle(startId) {
+  const first = S.base.find(t => t.id === startId) || S.base[0];
+  S.queue = S.shuffle ? [first, ...shuffled(S.base.filter(t => t !== first))] : S.base.slice();
+  S.qi = S.queue.indexOf(first);
+}
+function playAlbum(a, i, shuffle) {
+  if (shuffle) { S.shuffle = true; ls.set('shuffle', true); }
+  S.albumId = a.id; S.base = a.tracks.slice();
+  const start = shuffle ? a.tracks[Math.floor(Math.random() * a.tracks.length)] : a.tracks[i];
+  applyShuffle(start.id);
+  loadAndPlay(true, 0);
+}
+async function loadAndPlay(autoplay, seek) {
+  const seq = ++loadSeq, t = curTrack();
+  if (!t) return;
+  S.pendingSeek = 0;
+  updatePlayerUI(true);
+  try {
+    const blob = await getBlob(C_AUDIO, t.id);
+    if (seq !== loadSeq) return;
+    if (curURL) URL.revokeObjectURL(curURL);
+    curURL = URL.createObjectURL(blob);
+    audio.src = curURL;
+    if (seek) audio.addEventListener('loadedmetadata', () => { audio.currentTime = seek; }, { once: true });
+    if (autoplay) await audio.play();
+    cached.add(t.id);
+    updatePlayerUI(); setMediaSession(); saveResume(); prefetch();
+  } catch (e) {
+    if (seq !== loadSeq) return;
+    updatePlayerUI();
+    if (e instanceof AuthNeeded) toast('この曲はまだ端末に保存されていません。Googleに再接続してください');
+    else if (e.name === 'NotAllowedError') toast('再生ボタンをもう一度押してください');
+    else toast('再生できませんでした：' + t.title);
+  }
+}
+let prefetching = false;
+async function prefetch() {   // アルバムの残りを順番に端末へ保存（ログインの有効期限切れ対策）
+  if (prefetching || !tokenOk()) return;
+  prefetching = true;
+  try {
+    for (let k = 1; k <= Math.min(30, S.queue.length - 1); k++) {
+      const t = S.queue[(S.qi + k) % S.queue.length];
+      if (!cached.has(t.id)) await getBlob(C_AUDIO, t.id);
+    }
+  } catch {}
+  prefetching = false;
+}
+function next(auto) {
+  if (!S.queue.length) return;
+  if (auto && S.repeat === 'one') { audio.currentTime = 0; audio.play().catch(() => {}); return; }
+  if (S.qi + 1 >= S.queue.length) {
+    if (S.repeat === 'off' && auto) { audio.pause(); audio.currentTime = 0; updatePlayerUI(); return; }
+    S.qi = 0;
+  } else S.qi++;
+  loadAndPlay(true, 0);
+}
+function prev() {
+  if (!S.queue.length) return;
+  if (audio.currentTime > 3 || S.qi === 0) { audio.currentTime = 0; return; }
+  S.qi--; loadAndPlay(true, 0);
+}
+function togglePlay() {
+  if (S.qi < 0) return;
+  unlock();
+  if (!curURL) { loadAndPlay(true, S.pendingSeek); return; }
+  if (audio.paused) audio.play().catch(() => toast('再生できませんでした')); else audio.pause();
+}
+
+/* resume */
+function resumeSnapshot() { const t = curTrack(); return t ? { albumId: S.albumId, trackId: t.id, time: audio.currentTime || S.pendingSeek || 0 } : ls.get('resume', null); }
+function saveResume() { const r = resumeSnapshot(); if (r) ls.set('resume', r); }
+function restoreResume() {
+  const r = ls.get('resume', null); if (!r) return;
+  const a = S.library.find(x => x.id === r.albumId); if (!a) return;
+  S.albumId = a.id; S.base = a.tracks.slice();
+  applyShuffle(r.trackId);
+  S.pendingSeek = r.time || 0;
+  updatePlayerUI();
+}
+
+/* UI sync */
+function setIcon(btn, id) { btn.querySelector('use').setAttribute('href', '#' + id); }
+function updatePlayerUI(loading) {
+  const t = curTrack(), a = curAlbum();
+  $('#mini').hidden = !t;
+  if (!t) return;
+  const sub = [a?.artist, a?.title].filter(Boolean).join(' — ');
+  $('#miniTitle').textContent = t.title; $('#miniSub').textContent = sub;
+  $('#pTitle').textContent = t.title; $('#pSub').textContent = sub;
+  $('#sheetPos').textContent = `${S.qi + 1} / ${S.queue.length}`;
+  const key = (a?.cover || '') + '|' + (a?.id || '');
+  if ($('#miniCover').dataset.key !== key) {
+    $('#miniCover').dataset.key = key;
+    $('#miniCover').replaceWith(Object.assign(coverEl(a), { id: 'miniCover' })); $('#miniCover').dataset.key = key;
+    $('#pCover').replaceWith(Object.assign(coverEl(a), { id: 'pCover' }));
+  }
+  const playing = !audio.paused && !!curURL;
+  for (const b of [$('#miniPlay'), $('#playBtn')]) {
+    if (loading) b.replaceChildren(h('span', { class: 'spin' }));
+    else { if (!b.querySelector('use')) b.replaceChildren(icon('i-play')); setIcon(b, playing ? 'i-pause' : 'i-play'); }
+    b.setAttribute('aria-label', playing ? '一時停止' : '再生');
+  }
+  $('#shufBtn').classList.toggle('on', S.shuffle);
+  $('#repBtn').classList.toggle('on', S.repeat !== 'off');
+  $('#repOne').hidden = S.repeat !== 'one';
+  if (S.view.name === 'album') {
+    document.querySelectorAll('.trk').forEach(el => {
+      const on = S.albumId === S.view.id && el.dataset.id === t.id;
+      el.classList.toggle('on', on);
+      const n = el.querySelector('.n');
+      if (on && !n.querySelector('.eq')) n.replaceChildren(h('span', { class: 'eq' }, h('i'), h('i'), h('i')));
+      if (!on && n.querySelector('.eq')) { const idx = [...document.querySelectorAll('.trk')].indexOf(el); const tr = S.library.find(x => x.id === S.view.id)?.tracks[idx]; n.textContent = tr?.no ?? idx + 1; }
+      const eq = n.querySelector('.eq'); if (eq) eq.classList.toggle('paused', !playing);
+      if (cached.has(el.dataset.id) && el.lastChild.className !== 'dot') el.lastChild.replaceWith(h('span', { class: 'dot', title: '端末に保存済み' }));
+    });
+  }
+  updateTime();
+}
+let dragging = false;
+function updateTime() {
+  const d = audio.duration, c = audio.currentTime;
+  const dur = isFinite(d) ? d : 0;
+  $('#tCur').textContent = fmt(curURL ? c : S.pendingSeek); $('#tDur').textContent = fmt(dur);
+  if (!dragging) $('#seek').value = dur ? Math.round(c / dur * 1000) : 0;
+  $('#miniBar').style.width = dur ? (c / dur * 100) + '%' : '0';
+}
+
+/* Media Session (lock screen / Control Center) */
+function setMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  const t = curTrack(), a = curAlbum(); if (!t) return;
+  const art = a?.cover && coverURLs.get(a.cover);
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: a?.artist || '', album: a?.title || '', artwork: art ? [{ src: art, sizes: '512x512' }] : [{ src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }] });
+  } catch {}
+}
+function setPositionState() {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  const d = audio.duration; if (!isFinite(d) || !d) return;
+  try { navigator.mediaSession.setPositionState({ duration: d, position: Math.min(audio.currentTime, d), playbackRate: audio.playbackRate }); } catch {}
+}
+if ('mediaSession' in navigator) {
+  const set = (k, f) => { try { navigator.mediaSession.setActionHandler(k, f); } catch {} };
+  set('play', () => togglePlay()); set('pause', () => audio.pause());
+  set('nexttrack', () => next(false)); set('previoustrack', () => prev());
+  set('seekto', e => { audio.currentTime = e.seekTime; setPositionState(); });
+}
+
+/* audio events */
+audio.addEventListener('ended', () => { if (curURL) next(true); });
+audio.addEventListener('play', () => { if (curURL) { updatePlayerUI(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; } });
+audio.addEventListener('pause', () => { if (curURL) { updatePlayerUI(); saveResume(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; } });
+audio.addEventListener('loadedmetadata', () => { updateTime(); setPositionState(); });
+let lastSave = 0;
+audio.addEventListener('timeupdate', () => {
+  if (!curURL) return;
+  updateTime();
+  if (Date.now() - lastSave > 5000) { lastSave = Date.now(); saveResume(); setPositionState(); }
+});
+
+/* controls */
+$('#miniPlay').onclick = togglePlay;
+$('#playBtn').onclick = togglePlay;
+$('#miniNext').onclick = () => { unlock(); next(false); };
+$('#nextBtn').onclick = () => { unlock(); next(false); };
+$('#prevBtn').onclick = () => { unlock(); prev(); };
+$('#miniOpen').onclick = () => { $('#sheet').hidden = false; updatePlayerUI(); };
+$('#sheetClose').onclick = () => { $('#sheet').hidden = true; };
+$('#shufBtn').onclick = () => { S.shuffle = !S.shuffle; ls.set('shuffle', S.shuffle); const t = curTrack(); if (t) applyShuffle(t.id); updatePlayerUI(); };
+$('#repBtn').onclick = () => { S.repeat = { off: 'all', all: 'one', one: 'off' }[S.repeat]; ls.set('repeat', S.repeat); updatePlayerUI(); toast({ off: 'リピートしない', all: 'アルバムをリピート', one: '1曲をリピート' }[S.repeat]); };
+const seek = $('#seek');
+seek.addEventListener('input', () => { dragging = true; const d = audio.duration; if (isFinite(d)) $('#tCur').textContent = fmt(seek.value / 1000 * d); });
+seek.addEventListener('change', () => { const d = audio.duration; if (isFinite(d) && curURL) audio.currentTime = seek.value / 1000 * d; dragging = false; setPositionState(); });
+$('#backBtn').onclick = () => go({ name: 'library' });
+$('#settingsBtn').onclick = () => go({ name: 'settings' });
+$('#refreshBtn').onclick = refresh;
+$('#reauthBtn').onclick = () => { if (!audio.paused) { toast('再生を止めてから再接続してください'); return; } login(true); };
+
+/* ---------- boot ---------- */
+(async function boot() {
+  readAuthRedirect();
+  await loadCachedIndex();
+  if (S.view.name === 'settings') S.view = { name: 'library' };
+  restoreResume();
+  render();
+  if (S.clientId && S.root && tokenOk() && (!S.library.length || Date.now() - S.scannedAt > 6 * 3600 * 1000)) refresh();
+  if (S.clientId && S.root && !tokenOk() && !S.library.length) needAuth();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
