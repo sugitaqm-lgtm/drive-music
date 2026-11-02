@@ -1,5 +1,5 @@
 // アプリ本体だけをキャッシュする。曲や画像はページ側がCache Storageで管理する。
-const SHELL = 'dm-shell-v3';
+const SHELL = 'dm-shell-v7';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
